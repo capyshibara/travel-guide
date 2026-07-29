@@ -46,6 +46,11 @@ jobs:
       - run: npm ci
       - run: npm run build
       - uses: actions/configure-pages@v5
+        with:
+          # Turns Pages on (with "GitHub Actions" as the source) the first time this
+          # runs, instead of failing until someone sets it by hand in Settings.
+          # Requires the `pages: write` permission granted above.
+          enablement: true
       - uses: actions/upload-pages-artifact@v4
         with:
           path: dist
