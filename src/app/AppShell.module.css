@@ -1,0 +1,200 @@
+.root {
+  display: flex;
+  height: 100dvh;
+  background: var(--bg-page);
+}
+
+.column {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  width: 100%;
+}
+
+/* Mobile: a single 390px-ish column, centred with a hairline on wide phones. */
+@media (max-width: 767px) {
+  .column {
+    max-width: 100%;
+  }
+}
+
+.main {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  outline: none;
+}
+
+.mainInner {
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+@media (min-width: 768px) {
+  .mainInner {
+    padding: var(--space-6);
+    max-width: var(--container-tablet);
+    margin: 0 auto;
+    width: 100%;
+    gap: var(--space-5);
+  }
+}
+
+@media (min-width: 1200px) {
+  .mainInner {
+    max-width: var(--container-desktop);
+  }
+}
+
+/* Wide layout: list beside detail, instead of stretched mobile cards. */
+.split {
+  display: grid;
+  gap: var(--space-5);
+}
+@media (min-width: 1024px) {
+  .split {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: start;
+  }
+}
+@media (min-width: 1200px) {
+  .splitWide {
+    grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+  }
+}
+
+.stickyPane {
+  position: sticky;
+  top: var(--space-4);
+}
+
+.grid2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+@media (min-width: 768px) {
+  .grid2 {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  }
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.stackTight {
+  gap: var(--space-2);
+}
+.stackLoose {
+  gap: var(--space-5);
+}
+
+.sectionTitle {
+  font-size: var(--fs-title-md);
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.pageTitle {
+  font-size: var(--fs-title-lg);
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.eyebrow {
+  font-size: var(--fs-micro);
+  font-weight: var(--fw-bold);
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: var(--ls-wide);
+  margin: 0;
+}
+.eyebrowUrgent {
+  color: var(--status-danger);
+}
+
+.muted {
+  font-size: var(--fs-body-sm);
+  color: var(--text-secondary);
+}
+
+.rowBetween {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+/* Sticky day navigation above the itinerary timeline. */
+.stickyBar {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-sticky);
+  background: var(--bg-surface);
+  border-bottom: var(--border-w) solid var(--border-subtle);
+  padding: var(--space-3) var(--space-3) var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.definitionRow {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+  border-bottom: var(--border-w) solid var(--border-subtle);
+  font-size: var(--fs-body-md);
+}
+.definitionRow:last-child {
+  border-bottom: none;
+}
+.definitionLabel {
+  color: var(--text-secondary);
+  margin: 0;
+}
+.definitionValue {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--fw-bold);
+  margin: 0;
+  text-align: right;
+}
+
+/* An inline text link rendered as a button (navigates within the app).
+ * Sized to the 44px minimum target even though it sits inside a text row. */
+.inlineLink {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--touch-min);
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  color: var(--text-link);
+  text-decoration: underline;
+  text-align: left;
+  cursor: pointer;
+}
+.inlineLink:hover {
+  color: var(--text-link-hover);
+}
+
+/* A badge that is also a link. The badge itself stays compact; the button around it
+ * carries the touch target. */
+.badgeButton {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--touch-min);
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+}

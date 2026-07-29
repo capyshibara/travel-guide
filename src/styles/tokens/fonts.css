@@ -1,0 +1,23 @@
+/* Wayfare type stack.
+ *
+ * The design system ships an @import from fonts.googleapis.com. We keep the exact
+ * same three families but self-host them via @fontsource (all three are SIL OFL 1.1,
+ * so redistribution is permitted). Self-hosting is a delivery change, not a font
+ * substitution: it removes a third-party request on every load and — the reason that
+ * matters here — keeps the type correct when the app is opened offline in an airport,
+ * which is the product's stated primary context.
+ *
+ * IBM Plex Mono has no variable build on npm, so 400/500/600 are loaded as static
+ * weights (the only weights the design system uses).
+ */
+@import '@fontsource-variable/plus-jakarta-sans/index.css';
+@import '@fontsource-variable/public-sans/index.css';
+@import '@fontsource/ibm-plex-mono/400.css';
+@import '@fontsource/ibm-plex-mono/500.css';
+@import '@fontsource/ibm-plex-mono/600.css';
+
+:root {
+  --font-display: 'Plus Jakarta Sans Variable', 'Plus Jakarta Sans', system-ui, sans-serif;
+  --font-body: 'Public Sans Variable', 'Public Sans', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+}

@@ -1,0 +1,140 @@
+/* Wayfare color tokens — carried over from the design system.
+ *
+ * Four values differ from the shipped design system. Each is the minimum change
+ * needed to reach WCAG 2.2 AA, and each preserves the hue and role it was given.
+ * Measured ratios are in README.md ("Accessibility deltas").
+ *
+ *   1. --amber-600  62% -> 52%   Used as --status-warning, i.e. as *text* ("Ready to
+ *                                book" chip, fallback cost). Was 3.24:1 on its own
+ *                                tinted background. --amber-500 is untouched and still
+ *                                carries every decorative amber fill.
+ *   2. --green-600  52% -> 49%   Same reason, was 4.41:1 on --green-100.
+ *   3. --traveler-*-text (new)   The identity hues --traveler-a/--traveler-b are
+ *                                unchanged, so avatar rings, the 4px ActivityCard left
+ *                                border and filter chips look exactly as designed.
+ *                                These darker siblings are used only where the hue has
+ *                                to carry *text* (avatar initials on a tinted disc),
+ *                                where traveler-b was 2.84:1.
+ *   4. --border-control (new)    WCAG 1.4.11 wants 3:1 for the boundary of a control.
+ *                                --border-subtle/--border-default are unchanged and
+ *                                still draw every decorative card hairline.
+ */
+:root {
+  /* Primary — Horizon Teal, a dependable travel-compass hue */
+  --teal-50: oklch(96% 0.02 200);
+  --teal-100: oklch(92% 0.045 200);
+  --teal-200: oklch(85% 0.07 200);
+  --teal-300: oklch(76% 0.09 200);
+  --teal-400: oklch(66% 0.11 200);
+  --teal-500: oklch(56% 0.12 200);
+  --teal-600: oklch(48% 0.11 202);
+  --teal-700: oklch(40% 0.095 203);
+  --teal-800: oklch(32% 0.075 204);
+  --teal-900: oklch(24% 0.055 205);
+
+  /* Neutral — warm stone, not cold gray */
+  --stone-0: oklch(100% 0 90);
+  --stone-50: oklch(98% 0.003 90);
+  --stone-100: oklch(96% 0.004 85);
+  --stone-200: oklch(92% 0.006 80);
+  --stone-300: oklch(85% 0.008 75);
+  --stone-400: oklch(70% 0.01 70);
+  --stone-500: oklch(56% 0.012 65);
+  --stone-600: oklch(45% 0.012 60);
+  --stone-700: oklch(35% 0.012 55);
+  --stone-800: oklch(25% 0.01 50);
+  --stone-900: oklch(17% 0.008 45);
+  --stone-950: oklch(12% 0.006 40);
+
+  /* Semantic status */
+  --green-500: oklch(62% 0.15 148);
+  --green-600: oklch(49% 0.13 148); /* a11y: was 52% .14 148 */
+  --green-100: oklch(94% 0.05 148);
+  --amber-500: oklch(76% 0.16 75);
+  --amber-600: oklch(52% 0.13 62); /* a11y: was 62% .15 65 */
+  --amber-100: oklch(95% 0.06 85);
+  --red-500: oklch(60% 0.19 25);
+  --red-600: oklch(52% 0.19 25);
+  --red-100: oklch(94% 0.06 25);
+  --blue-500: oklch(60% 0.14 245);
+  --blue-600: oklch(52% 0.14 245);
+  --blue-100: oklch(94% 0.04 245);
+
+  /* Traveler identity colors */
+  --traveler-a: oklch(55% 0.14 295); /* indigo/violet */
+  --traveler-a-bg: oklch(94% 0.035 295);
+  --traveler-a-text: oklch(47% 0.15 295); /* a11y: text-on-tint sibling */
+  --traveler-b: oklch(65% 0.16 55); /* warm amber-orange */
+  --traveler-b-bg: oklch(95% 0.05 55);
+  --traveler-b-text: oklch(47% 0.13 55); /* a11y: text-on-tint sibling */
+  --traveler-shared: var(--teal-600);
+  --traveler-shared-bg: var(--teal-50);
+  --traveler-shared-text: var(--teal-700);
+
+  /* Semantic aliases */
+  --color-primary: var(--teal-600);
+  --color-primary-hover: var(--teal-700);
+  --color-primary-active: var(--teal-800);
+  --color-primary-soft: var(--teal-50);
+  --color-on-primary: var(--stone-0);
+
+  --bg-page: var(--stone-50);
+  --bg-surface: var(--stone-0);
+  --bg-surface-sunken: var(--stone-100);
+  --bg-overlay: oklch(20% 0.01 50 / 0.45);
+
+  --border-subtle: var(--stone-200);
+  --border-default: var(--stone-300);
+  --border-strong: var(--stone-400);
+  --border-control: oklch(62% 0.012 65); /* a11y: 3:1 boundary for controls */
+
+  --text-primary: var(--stone-900);
+  --text-secondary: var(--stone-600);
+  --text-tertiary: var(--stone-500);
+  --text-on-primary: var(--stone-0);
+  --text-link: var(--teal-700);
+  --text-link-hover: var(--teal-800);
+
+  --status-success: var(--green-600);
+  --status-success-bg: var(--green-100);
+  --status-warning: var(--amber-600);
+  --status-warning-bg: var(--amber-100);
+  --status-danger: var(--red-600);
+  --status-danger-bg: var(--red-100);
+  --status-info: var(--blue-600);
+  --status-info-bg: var(--blue-100);
+}
+
+:root[data-theme='dark'] {
+  --bg-page: var(--stone-950);
+  --bg-surface: var(--stone-900);
+  --bg-surface-sunken: var(--stone-800);
+  --border-subtle: var(--stone-800);
+  --border-default: var(--stone-700);
+  --border-strong: var(--stone-600);
+  --border-control: var(--stone-500);
+  --text-primary: var(--stone-50);
+  --text-secondary: var(--stone-300);
+  --text-tertiary: var(--stone-400);
+  --color-primary: var(--teal-400);
+  --color-primary-hover: var(--teal-300);
+  --color-primary-soft: oklch(28% 0.05 200);
+  --color-on-primary: var(--stone-950);
+  --text-on-primary: var(--stone-950);
+  --text-link: var(--teal-300);
+  --text-link-hover: var(--teal-200);
+  --status-success: oklch(78% 0.14 148);
+  --status-success-bg: oklch(28% 0.06 148);
+  --status-warning: oklch(82% 0.14 75);
+  --status-warning-bg: oklch(30% 0.07 75);
+  --status-danger: oklch(76% 0.15 25);
+  --status-danger-bg: oklch(30% 0.08 25);
+  --status-info: oklch(78% 0.11 245);
+  --status-info-bg: oklch(28% 0.06 245);
+  --traveler-a-text: oklch(82% 0.09 295);
+  --traveler-b-text: oklch(84% 0.11 60);
+  --traveler-a-bg: oklch(30% 0.06 295);
+  --traveler-b-bg: oklch(30% 0.06 55);
+  --traveler-shared-bg: oklch(28% 0.05 200);
+  --traveler-shared-text: var(--teal-300);
+}

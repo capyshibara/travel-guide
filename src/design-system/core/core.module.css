@@ -1,0 +1,195 @@
+/* Core primitives: Button, IconButton, Badge, Card. */
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  border: var(--border-w) solid transparent;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-body);
+  font-weight: var(--fw-semibold);
+  cursor: pointer;
+  text-decoration: none;
+  white-space: nowrap;
+  transition:
+    background var(--duration-fast) var(--ease-standard),
+    border-color var(--duration-fast) var(--ease-standard),
+    transform var(--duration-fast) var(--ease-standard);
+}
+
+.button:disabled,
+.button[aria-disabled='true'] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.button:not(:disabled):active {
+  transform: scale(0.97);
+}
+
+/* Sizes — md is the 44px default touch target. */
+.sm {
+  height: 36px;
+  padding: 0 var(--space-4);
+  font-size: var(--fs-body-sm);
+}
+.md {
+  height: var(--touch-min);
+  padding: 0 var(--space-5);
+  font-size: var(--fs-body-md);
+}
+.lg {
+  height: 52px;
+  padding: 0 var(--space-6);
+  font-size: var(--fs-body-lg);
+}
+
+.primary {
+  background: var(--color-primary);
+  color: var(--text-on-primary);
+}
+.primary:not(:disabled):hover {
+  background: var(--color-primary-hover);
+}
+
+.secondary {
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  border-color: var(--border-control);
+}
+.secondary:not(:disabled):hover {
+  background: var(--bg-surface-sunken);
+}
+
+.ghost {
+  background: transparent;
+  color: var(--color-primary);
+}
+.ghost:not(:disabled):hover {
+  background: var(--color-primary-soft);
+}
+
+.danger {
+  background: var(--status-danger);
+  color: var(--stone-0);
+}
+.danger:not(:disabled):hover {
+  filter: brightness(0.92);
+}
+
+.fullWidth {
+  width: 100%;
+}
+
+/* A 36px control still needs a 44px hit area, added without changing the visual box. */
+.sm::after {
+  content: '';
+  position: absolute;
+}
+.smTouch {
+  position: relative;
+}
+.smTouch::before {
+  content: '';
+  position: absolute;
+  inset: -4px 0;
+  min-height: var(--touch-min);
+}
+
+/* ------------------------------------------------------------- IconButton */
+.iconButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--touch-min);
+  min-height: var(--touch-min);
+  border-radius: var(--radius-md);
+  border: var(--border-w) solid transparent;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-standard);
+}
+.iconButton:hover:not(:disabled) {
+  background: var(--bg-surface-sunken);
+}
+.iconButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.iconButtonActive {
+  border-color: var(--color-primary);
+  background: var(--color-primary-soft);
+  color: var(--color-primary-hover);
+}
+
+/* ------------------------------------------------------------------ Badge */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-caption);
+  font-weight: var(--fw-semibold);
+  font-family: var(--font-body);
+  line-height: var(--lh-snug);
+}
+.neutral {
+  background: var(--bg-surface-sunken);
+  color: var(--text-secondary);
+}
+.badgePrimary {
+  background: var(--color-primary-soft);
+  color: var(--color-primary-hover);
+}
+.success {
+  background: var(--status-success-bg);
+  color: var(--status-success);
+}
+.warning {
+  background: var(--status-warning-bg);
+  color: var(--status-warning);
+}
+.badgeDanger {
+  background: var(--status-danger-bg);
+  color: var(--status-danger);
+}
+.info {
+  background: var(--status-info-bg);
+  color: var(--status-info);
+}
+
+/* ------------------------------------------------------------------- Card */
+.card {
+  background: var(--bg-surface);
+  border: var(--border-w) solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--elevation-1);
+  padding: var(--space-4);
+}
+.cardFlush {
+  padding: 0;
+}
+.cardInteractive {
+  display: block;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  transition: background var(--duration-fast) var(--ease-standard);
+}
+.cardInteractive:hover {
+  background: var(--bg-surface-sunken);
+}
+
+.cardEyebrow {
+  font-size: var(--fs-caption);
+  font-weight: var(--fw-semibold);
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: var(--ls-wide);
+  margin: 0 0 var(--space-2);
+}

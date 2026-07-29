@@ -1,0 +1,155 @@
+.dropZone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  border: 2px dashed var(--border-strong);
+  border-radius: var(--radius-xl);
+  background: var(--bg-surface-sunken);
+  padding: var(--space-8) var(--space-5);
+  text-align: center;
+  cursor: pointer;
+  min-height: 180px;
+  color: var(--color-primary);
+  transition:
+    border-color var(--duration-fast) var(--ease-standard),
+    background var(--duration-fast) var(--ease-standard);
+}
+.dropZone:hover {
+  border-color: var(--color-primary);
+}
+.dropZoneActive {
+  border-color: var(--color-primary);
+  background: var(--color-primary-soft);
+}
+.dropZone:focus-within {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+.dropInput {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+.dropTitle {
+  font-family: var(--font-display);
+  font-weight: var(--fw-bold);
+  font-size: var(--fs-title-sm);
+  color: var(--text-primary);
+  margin: 0;
+}
+.dropHint {
+  font-size: var(--fs-body-sm);
+  color: var(--text-secondary);
+}
+
+/* --------------------------------------------------------------- Stepper */
+.stepper {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.step {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+}
+.stepMarkers {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  align-self: stretch;
+}
+.stepDot {
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-circle);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--fs-caption);
+  font-weight: var(--fw-bold);
+  background: var(--bg-surface-sunken);
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+}
+.stepDotDone {
+  background: var(--color-primary);
+  color: var(--text-on-primary);
+}
+.stepDotCurrent {
+  background: var(--bg-surface);
+  color: var(--color-primary);
+  border: 2px solid var(--color-primary);
+}
+.stepConnector {
+  width: 2px;
+  flex: 1;
+  min-height: 24px;
+  background: var(--border-subtle);
+}
+.stepConnectorDone {
+  background: var(--color-primary);
+}
+.stepLabel {
+  padding: 2px 0 var(--space-5);
+  font-size: var(--fs-body-md);
+  color: var(--text-tertiary);
+}
+.stepLabelActive {
+  font-weight: var(--fw-bold);
+  color: var(--text-primary);
+}
+.stepLabelDone {
+  color: var(--text-primary);
+}
+
+/* ------------------------------------------------------ SheetDetectionCard */
+.sheetCard {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  background: var(--bg-surface);
+  border: var(--border-w) solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+}
+.sheetIcon {
+  color: var(--color-primary);
+}
+.sheetIconMuted {
+  color: var(--text-tertiary);
+}
+.sheetBody {
+  flex: 1;
+  min-width: 0;
+}
+.sheetName {
+  font-family: var(--font-display);
+  font-weight: var(--fw-bold);
+  font-size: var(--fs-body-md);
+  color: var(--text-primary);
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.sheetRole {
+  font-size: var(--fs-caption);
+  color: var(--text-secondary);
+}
+
+/* ---------------------------------------------------------------- Progress */
+.progressTrack {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--stone-200);
+  overflow: hidden;
+}
+.progressFill {
+  height: 100%;
+  background: var(--color-primary);
+  transition: width var(--duration-base) var(--ease-decel);
+}

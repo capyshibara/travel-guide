@@ -1,0 +1,644 @@
+/* ---------------------------------------------------------- TravelerAvatar */
+.avatar {
+  border-radius: var(--radius-circle);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-weight: var(--fw-extrabold);
+  flex-shrink: 0;
+  border: var(--border-w-thick) solid currentColor;
+  line-height: 1;
+}
+.avatarA {
+  background: var(--traveler-a-bg);
+  color: var(--traveler-a-text);
+}
+.avatarB {
+  background: var(--traveler-b-bg);
+  color: var(--traveler-b-text);
+}
+.avatarC {
+  background: var(--status-info-bg);
+  color: var(--status-info);
+}
+.avatarD {
+  background: var(--status-success-bg);
+  color: var(--status-success);
+}
+.avatarShared {
+  background: var(--traveler-shared-bg);
+  color: var(--traveler-shared-text);
+}
+.avatarNone {
+  background: var(--bg-surface-sunken);
+  color: var(--text-tertiary);
+}
+.avatarStack {
+  display: inline-flex;
+  align-items: center;
+}
+.avatarStack > * + * {
+  margin-left: -8px;
+}
+
+/* --------------------------------------------------------- TravelerFilter */
+.segmented {
+  display: flex;
+  gap: var(--space-2);
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+.segmentedItem {
+  position: relative;
+  white-space: nowrap;
+  padding: var(--space-2) var(--space-3);
+  min-height: 36px;
+  border-radius: var(--radius-pill);
+  border: var(--border-w) solid var(--border-control);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  font-weight: var(--fw-semibold);
+  font-size: var(--fs-body-sm);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+.segmentedItem:hover {
+  background: var(--bg-surface-sunken);
+}
+/* Drawn at the design system's 36px; hit area extended to the required 44px. */
+.segmentedItem::after,
+.scenarioOption::after {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  height: var(--touch-min);
+}
+.segmentedItemActive,
+.segmentedItemActive:hover {
+  border-color: var(--color-primary);
+  background: var(--color-primary-soft);
+  color: var(--color-primary-hover);
+}
+
+/* ------------------------------------------------------- ActivityTypeBadge */
+/* Deliberately neutral: meaning comes from icon + label, not a colour per category. */
+.typeBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--fs-caption);
+  font-weight: var(--fw-semibold);
+  color: var(--text-secondary);
+  background: var(--bg-surface-sunken);
+  border-radius: var(--radius-pill);
+  padding: var(--space-1) var(--space-3);
+  white-space: nowrap;
+}
+
+/* ------------------------------------------------------ TimeDurationBlock */
+.timeBlock {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  min-width: 64px;
+}
+.timeRange {
+  font-size: var(--fs-body-md);
+  font-weight: var(--fw-semibold);
+  color: var(--text-primary);
+}
+.timeDuration {
+  font-size: var(--fs-micro);
+  color: var(--text-tertiary);
+  margin-top: 2px;
+}
+.overnightTag {
+  font-size: var(--fs-micro);
+  font-weight: var(--fw-bold);
+  color: var(--status-info);
+  background: var(--status-info-bg);
+  border-radius: var(--radius-sm);
+  padding: 1px var(--space-1);
+  margin-top: 2px;
+  font-family: var(--font-body);
+}
+
+/* ----------------------------------------------------------- RouteDisplay */
+.route {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--fs-body-md);
+  font-weight: var(--fw-semibold);
+  color: var(--text-primary);
+  flex-wrap: wrap;
+}
+.routeIcon {
+  color: var(--text-tertiary);
+}
+
+/* ------------------------------------------------------------ CostDisplay */
+.cost {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+.costAlignStart {
+  align-items: flex-start;
+}
+.costAmount {
+  font-size: var(--fs-body-md);
+  font-weight: var(--fw-bold);
+  color: var(--text-primary);
+}
+.costAmountFallback {
+  color: var(--status-warning);
+}
+.costConverted {
+  font-size: var(--fs-micro);
+  color: var(--text-tertiary);
+}
+.costScenario {
+  font-size: var(--fs-micro);
+  font-weight: var(--fw-bold);
+  text-transform: uppercase;
+  letter-spacing: var(--ls-wide);
+  margin-top: 2px;
+  font-family: var(--font-body);
+  color: var(--status-success);
+}
+.costScenarioFallback {
+  color: var(--status-warning);
+}
+
+/* ---------------------------------------------------------- ScenarioToggle */
+.scenarioToggle {
+  display: inline-flex;
+  background: var(--bg-surface-sunken);
+  border-radius: var(--radius-pill);
+  padding: 3px;
+}
+.scenarioOption {
+  position: relative;
+  padding: var(--space-2) var(--space-4);
+  min-height: 38px;
+  border-radius: var(--radius-pill);
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-weight: var(--fw-bold);
+  font-size: var(--fs-body-sm);
+  cursor: pointer;
+}
+.scenarioOptionActive {
+  background: var(--bg-surface);
+  box-shadow: var(--elevation-1);
+  color: var(--text-primary);
+}
+
+/* -------------------------------------------------------- BookingStatusChip */
+.statusChip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--fs-caption);
+  font-weight: var(--fw-bold);
+  border-radius: var(--radius-pill);
+  padding: var(--space-1) var(--space-3);
+  white-space: nowrap;
+}
+.statusNotStarted {
+  background: var(--bg-surface-sunken);
+  color: var(--text-secondary);
+}
+.statusResearching {
+  background: var(--status-info-bg);
+  color: var(--status-info);
+}
+.statusReady {
+  background: var(--status-warning-bg);
+  color: var(--status-warning);
+}
+.statusBooked {
+  background: var(--status-success-bg);
+  color: var(--status-success);
+}
+.statusConfirmed {
+  background: var(--color-primary);
+  color: var(--text-on-primary);
+}
+
+/* ------------------------------------------------------ ExternalLinkButton */
+.externalLink {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--fs-body-sm);
+  font-weight: var(--fw-semibold);
+  color: var(--text-link);
+  text-decoration: none;
+  min-height: var(--touch-min);
+  overflow-wrap: anywhere;
+}
+.externalLink:hover {
+  text-decoration: underline;
+}
+
+/* ----------------------------------------------------------- TimelineRail */
+.rail {
+  position: relative;
+  padding-left: var(--space-5);
+  list-style: none;
+  margin: 0;
+}
+.rail::before {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 6px;
+  bottom: 6px;
+  width: 2px;
+  background: var(--border-subtle);
+}
+.railItems {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* ----------------------------------------------------------- ActivityCard */
+.activityCard {
+  position: relative;
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: var(--bg-surface);
+  border: var(--border-w) solid var(--border-subtle);
+  border-left: var(--border-w-accent) solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--elevation-1);
+  padding: var(--space-4);
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  transition: background var(--duration-fast) var(--ease-standard);
+}
+.activityCard:hover {
+  background: var(--bg-surface-sunken);
+}
+.activityCardNow {
+  border-color: var(--color-primary);
+  border-left-color: var(--color-primary);
+  border-width: var(--border-w-thick);
+  border-left-width: var(--border-w-accent);
+  box-shadow: var(--elevation-2);
+}
+.travelerA {
+  border-left-color: var(--traveler-a);
+}
+.travelerB {
+  border-left-color: var(--traveler-b);
+}
+.travelerC {
+  border-left-color: var(--status-info);
+}
+.travelerD {
+  border-left-color: var(--status-success);
+}
+.travelerShared {
+  border-left-color: var(--traveler-shared);
+}
+.travelerNone {
+  border-left-color: var(--border-strong);
+}
+
+.nowFlag {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--fs-micro);
+  font-weight: var(--fw-extrabold);
+  letter-spacing: var(--ls-wide);
+  color: var(--color-primary);
+  text-transform: uppercase;
+  margin-bottom: var(--space-2);
+}
+.nextFlag {
+  color: var(--text-secondary);
+}
+.activityTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+.activityTime {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--fs-body-sm);
+  font-weight: var(--fw-semibold);
+  color: var(--text-primary);
+}
+.activityTimeMuted {
+  color: var(--text-tertiary);
+  font-weight: var(--fw-regular);
+}
+.activityTitle {
+  font-family: var(--font-display);
+  font-weight: var(--fw-bold);
+  font-size: var(--fs-body-md);
+  color: var(--text-primary);
+  margin: var(--space-2) 0 0;
+}
+.activityRoute {
+  font-size: var(--fs-body-sm);
+  color: var(--text-secondary);
+  margin-top: var(--space-1);
+}
+.activityMeta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  margin-top: var(--space-3);
+}
+.activityBookingIcon {
+  color: var(--status-warning);
+}
+.activityWarning {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+  font-size: var(--fs-caption);
+  color: var(--status-warning);
+  font-weight: var(--fw-semibold);
+}
+
+/* ------------------------------------------------------------- DaySummary */
+.daySummary {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: 0 2px var(--space-1);
+}
+.dayTitle {
+  font-family: var(--font-display);
+  font-weight: var(--fw-extrabold);
+  font-size: var(--fs-title-md);
+  color: var(--text-primary);
+  margin: 0;
+}
+.daySub {
+  font-size: var(--fs-body-sm);
+  color: var(--text-secondary);
+}
+.dayCost {
+  text-align: right;
+  flex-shrink: 0;
+}
+.dayCostValue {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--fw-bold);
+  font-size: var(--fs-body-sm);
+  color: var(--text-primary);
+}
+.dayProgress {
+  width: 80px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--stone-200);
+  margin-top: var(--space-2);
+  margin-left: auto;
+  overflow: hidden;
+}
+.dayProgressFill {
+  height: 100%;
+  background: var(--color-primary);
+}
+
+/* --------------------------------------------------------- TripSummaryCard */
+/* The one gradient in the system, reserved for this hero. */
+.hero {
+  background: linear-gradient(180deg, var(--teal-600), var(--teal-700));
+  color: var(--stone-0);
+  border-radius: var(--radius-xl);
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.heroTitle {
+  font-family: var(--font-display);
+  font-weight: var(--fw-extrabold);
+  font-size: var(--fs-title-lg);
+  margin: 0;
+  color: var(--stone-0);
+}
+.heroSub {
+  font-size: var(--fs-body-sm);
+  opacity: 0.92;
+  margin-top: var(--space-1);
+}
+.heroPanel {
+  background: rgb(255 255 255 / 0.14);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+}
+.heroPanelLabel {
+  font-size: var(--fs-micro);
+  opacity: 0.88;
+  font-weight: var(--fw-bold);
+  text-transform: uppercase;
+  letter-spacing: var(--ls-wide);
+}
+.heroPanelValue {
+  font-size: var(--fs-body-md);
+  font-weight: var(--fw-bold);
+  margin-top: 2px;
+}
+.heroStats {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.heroStatLabel {
+  opacity: 0.88;
+  font-size: var(--fs-micro);
+}
+.heroStatValue {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--fw-bold);
+  font-size: var(--fs-body-md);
+}
+.heroLink {
+  color: var(--stone-0);
+  text-decoration: underline;
+}
+
+/* ------------------------------------------------------ BudgetSummaryCard */
+.metric {
+  background: var(--bg-surface);
+  border: var(--border-w) solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  box-shadow: var(--elevation-1);
+}
+.metricLabel {
+  font-size: var(--fs-caption);
+  font-weight: var(--fw-semibold);
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: var(--ls-wide);
+}
+.metricValue {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--fw-bold);
+  font-size: var(--fs-display-sm);
+  color: var(--text-primary);
+  margin-top: var(--space-1);
+  overflow-wrap: anywhere;
+}
+.metricValueWarning {
+  color: var(--status-warning);
+}
+.metricSub {
+  font-size: var(--fs-caption);
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+/* ------------------------------------------------------- CategoryBreakdown */
+.breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+}
+.breakdownRow {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  font-size: var(--fs-body-sm);
+  margin-bottom: var(--space-1);
+}
+.breakdownLabel {
+  color: var(--text-secondary);
+  font-weight: var(--fw-semibold);
+}
+.breakdownValue {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+  font-weight: var(--fw-bold);
+}
+.breakdownTrack {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--stone-200);
+  overflow: hidden;
+}
+.breakdownFill {
+  height: 100%;
+  background: var(--color-primary);
+}
+
+/* ------------------------------------------------------ BookingChecklistRow */
+.bookingRow {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  background: var(--bg-surface);
+  border: var(--border-w) solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+}
+.bookingTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+.bookingTitle {
+  font-family: var(--font-display);
+  font-weight: var(--fw-bold);
+  font-size: var(--fs-body-md);
+  color: var(--text-primary);
+  margin: 0;
+}
+.bookingMeta {
+  font-size: var(--fs-caption);
+  color: var(--text-tertiary);
+  margin-top: 2px;
+}
+.bookingPrices {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--fs-body-sm);
+  color: var(--text-secondary);
+  flex-wrap: wrap;
+}
+.bookingPriceStrong {
+  color: var(--text-primary);
+  font-weight: var(--fw-bold);
+}
+.bookingActions {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* --------------------------------------------------------------- SourceCard */
+.sourceCard {
+  background: var(--bg-surface);
+  border: var(--border-w) solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.sourceTopic {
+  font-size: var(--fs-micro);
+  font-weight: var(--fw-bold);
+  color: var(--color-primary-hover);
+  text-transform: uppercase;
+  letter-spacing: var(--ls-wide);
+  margin: 0;
+}
+.sourceFact {
+  font-size: var(--fs-body-md);
+  color: var(--text-primary);
+  line-height: var(--lh-normal);
+}
+.sourceNotes {
+  font-size: var(--fs-caption);
+  color: var(--text-tertiary);
+}
+.sourceFooter {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  margin-top: var(--space-1);
+}

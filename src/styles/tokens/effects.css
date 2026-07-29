@@ -1,0 +1,38 @@
+/* Radius, borders, elevation, icon sizes, motion — carried over from the design system. */
+:root {
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-pill: 999px;
+  --radius-circle: 50%;
+
+  --border-w: 1px;
+  --border-w-thick: 1.5px;
+  --border-w-accent: 4px; /* ActivityCard traveler stripe */
+
+  --elevation-0: none;
+  --elevation-1: 0 1px 2px oklch(20% 0.01 50 / 0.06), 0 1px 1px oklch(20% 0.01 50 / 0.04);
+  --elevation-2: 0 2px 8px oklch(20% 0.01 50 / 0.08), 0 1px 2px oklch(20% 0.01 50 / 0.06);
+  --elevation-3: 0 8px 24px oklch(20% 0.01 50 / 0.12), 0 2px 6px oklch(20% 0.01 50 / 0.06);
+  --elevation-focus: 0 0 0 3px var(--teal-100);
+
+  --icon-xs: 14px;
+  --icon-sm: 18px;
+  --icon-md: 22px;
+  --icon-lg: 28px;
+  --icon-xl: 36px;
+
+  --ease-standard: cubic-bezier(0.2, 0.7, 0.3, 1);
+  --ease-decel: cubic-bezier(0, 0, 0.2, 1);
+  --ease-accel: cubic-bezier(0.4, 0, 1, 1);
+
+  --duration-fast: 120ms;
+  --duration-base: 200ms;
+  --duration-slow: 320ms;
+
+  --z-sticky: 20;
+  --z-nav: 30;
+  --z-overlay: 100;
+  --z-toast: 200;
+}

@@ -1,0 +1,13 @@
+node_modules
+dist
+coverage
+*.local
+.DS_Store
+.vite
+
+# Guard against TypeScript ever emitting compiled output next to the sources.
+# (`npm run typecheck` uses `tsc -b`, which honours `noEmit` in the tsconfigs.)
+src/**/*.js
+src/**/*.d.ts
+src/**/*.js.map
+!src/**/*.config.js

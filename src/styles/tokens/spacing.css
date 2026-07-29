@@ -1,0 +1,25 @@
+/* 8pt spacing grid — carried over from the design system verbatim. */
+:root {
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 32px;
+  --space-8: 40px;
+  --space-9: 48px;
+  --space-10: 64px;
+  --space-11: 80px;
+  --space-12: 96px;
+
+  --touch-min: 44px;
+
+  --bp-mobile: 390px;
+  --bp-tablet: 768px;
+  --bp-desktop: 1440px;
+
+  --container-mobile: 390px;
+  --container-tablet: 720px;
+  --container-desktop: 1240px;
+}

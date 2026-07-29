@@ -1,0 +1,128 @@
+.dayBar {
+  margin: calc(var(--space-4) * -1) calc(var(--space-4) * -1) 0;
+}
+
+@media (min-width: 768px) {
+  .dayBar {
+    margin: calc(var(--space-6) * -1) calc(var(--space-6) * -1) 0;
+    border-radius: 0;
+  }
+}
+
+.dayTabs {
+  display: flex;
+  gap: var(--space-1);
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  padding-bottom: var(--space-1);
+  /* Keep the focus ring of an edge tab from being clipped by the scroll container. */
+  scroll-padding-inline: var(--space-2);
+}
+
+.dayBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding-top: var(--space-4);
+}
+
+.timeMuted {
+  color: var(--text-tertiary);
+  font-weight: var(--fw-regular);
+}
+
+.overnight {
+  color: var(--status-info);
+  font-weight: var(--fw-bold);
+  font-size: var(--fs-micro);
+}
+
+.selectedItem > * {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* -------------------------------------------------------------- Detail page */
+.detailHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.detailTitle {
+  font-size: var(--fs-display-sm);
+  color: var(--text-primary);
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.detailMeta {
+  font-size: var(--fs-body-sm);
+  color: var(--text-secondary);
+  margin-top: var(--space-1);
+}
+
+.detailRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.costPair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+}
+
+.costLabel {
+  font-size: var(--fs-caption);
+  color: var(--text-tertiary);
+  margin: 0 0 var(--space-1);
+}
+
+.practicalList {
+  margin: 0;
+  display: grid;
+  gap: var(--space-2);
+}
+
+.practicalRow {
+  display: flex;
+  gap: var(--space-3);
+  font-size: var(--fs-body-sm);
+}
+
+.practicalLabel {
+  color: var(--text-tertiary);
+  min-width: 110px;
+  flex-shrink: 0;
+  margin: 0;
+}
+
+.practicalValue {
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.prevNext {
+  display: flex;
+  gap: var(--space-3);
+}
+.prevNext > * {
+  flex: 1;
+  min-width: 0;
+}
+.prevNextLabel {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.detailActions {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
