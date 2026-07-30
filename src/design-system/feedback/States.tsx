@@ -3,6 +3,8 @@ import styles from './feedback.module.css';
 import { cx } from '../../lib/cx';
 import { Button } from '../core/Button';
 import { Icon, type IconName } from '../Icon';
+import { useT } from '../../i18n/useT';
+
 
 export interface EmptyStateProps {
   icon?: IconName;
@@ -31,7 +33,8 @@ export interface ErrorStateProps {
   retryLabel?: string;
 }
 
-export function ErrorState({ title, description, onRetry, retryLabel = 'Try again' }: ErrorStateProps) {
+export function ErrorState({ title, description, onRetry, retryLabel }: ErrorStateProps) {
+  const t = useT();
   return (
     <div className={styles.state} role="alert">
       <span className={cx(styles.stateIcon, styles.stateIconDanger)}>
@@ -42,7 +45,7 @@ export function ErrorState({ title, description, onRetry, retryLabel = 'Try agai
       {onRetry ? (
         <div className={styles.stateAction}>
           <Button variant="secondary" onClick={onRetry}>
-            {retryLabel}
+            {retryLabel ?? t.common.tryAgain}
           </Button>
         </div>
       ) : null}

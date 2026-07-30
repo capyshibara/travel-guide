@@ -1,6 +1,7 @@
 import styles from './import.module.css';
 import { cx } from '../../lib/cx';
 import { Icon } from '../Icon';
+import { useT } from '../../i18n/useT';
 
 export interface ImportProgressStepperProps {
   steps: readonly string[];
@@ -9,8 +10,9 @@ export interface ImportProgressStepperProps {
 }
 
 export function ImportProgressStepper({ steps, current }: ImportProgressStepperProps) {
+  const t = useT();
   return (
-    <ol className={styles.stepper} aria-label="Import progress">
+    <ol className={styles.stepper} aria-label={t.import.progress}>
       {steps.map((step, index) => {
         const done = index < current;
         const active = index === current;
@@ -26,8 +28,8 @@ export function ImportProgressStepper({ steps, current }: ImportProgressStepperP
             </div>
             <span className={cx(styles.stepLabel, done && styles.stepLabelDone, active && styles.stepLabelActive)}>
               {step}
-              {done ? <span className="visually-hidden"> — done</span> : null}
-              {active ? <span className="visually-hidden"> — in progress</span> : null}
+              {done ? <span className="visually-hidden"> {t.import.stepDone}</span> : null}
+              {active ? <span className="visually-hidden"> {t.import.stepInProgress}</span> : null}
             </span>
           </li>
         );

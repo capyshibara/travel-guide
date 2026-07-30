@@ -4,6 +4,7 @@ import { cx } from '../../lib/cx';
 import { Icon } from '../Icon';
 import { Link } from '../../app/router';
 import { PRIMARY_NAV, SECONDARY_NAV } from './navItems';
+import { useT } from '../../i18n/useT';
 
 export interface SidebarProps {
   activeKey: string;
@@ -18,11 +19,12 @@ export interface SidebarProps {
  * inline because there is room for it at this width.
  */
 export function Sidebar({ activeKey, tripTitle, issueCount, footer }: SidebarProps) {
+  const t = useT();
   const items = [...PRIMARY_NAV.filter((item) => item.key !== 'more'), ...SECONDARY_NAV];
 
   return (
-    <nav className={styles.sidebar} aria-label="Primary">
-      <div className={styles.sidebarBrand}>Wayfare</div>
+    <nav className={styles.sidebar} aria-label={t.nav.primary}>
+      <div className={styles.sidebarBrand}>{t.app.name}</div>
       {tripTitle ? <div className={styles.sidebarTrip}>{tripTitle}</div> : null}
       {items.map((item) => {
         const active = item.key === activeKey || (activeKey === 'more' && item.key === 'sources');
@@ -34,11 +36,11 @@ export function Sidebar({ activeKey, tripTitle, issueCount, footer }: SidebarPro
             aria-current={active ? 'page' : undefined}
           >
             <Icon name={item.icon} size="sm" />
-            {item.label}
+            {t.nav[item.labelKey]}
             {item.key === 'issues' && issueCount ? (
               <span className={styles.sidebarCount}>
                 {issueCount}
-                <span className="visually-hidden"> unresolved issues</span>
+                <span className="visually-hidden"> {t.nav.unresolvedIssues}</span>
               </span>
             ) : null}
           </Link>

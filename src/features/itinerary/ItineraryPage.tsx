@@ -30,13 +30,16 @@ import {
 import {
   formatDayLabel,
   formatDayOfMonth,
+  formatDuration,
   formatFullDate,
   formatMinutes,
   formatMoney,
   formatWeekdayShort,
-  pluralize,
 } from '../../lib/format';
-import { scopeInitials, scopeLabel, scopeSlot } from '../../import/travelers';
+import { scopeInitials, scopeLabel, scopeSlot, travelerName } from '../../import/travelers';
+import { useT } from '../../i18n/useT';
+import type { Messages } from '../../i18n/en';
+import type { ConnectionMessage } from '../../domain/selectors';
 import type { ItineraryDay, Trip } from '../../domain/types';
 
 export interface ItineraryPageProps {
@@ -55,6 +58,7 @@ export interface ItineraryPageProps {
 export function ItineraryPage({ dayId, selectedItemId, onSelectItem }: ItineraryPageProps) {
   const { result, overrides, preferences, setPreferences } = useTripContext();
   const navigate = useNavigate();
+  const t = useT();
   const trip = result?.trip;
   const now = useMemo(() => new Date(), []);
   const tabsRef = useRef<HTMLDivElement>(null);
@@ -80,9 +84,9 @@ export function ItineraryPage({ dayId, selectedItemId, onSelectItem }: Itinerary
     return (
       <EmptyState
         icon="map"
-        title="No activities yet"
-        description="Your workbook did not contain any itinerary rows Wayfare could read."
-        action={<Button onClick={() => navigate('/import')}>Import a workbook</Button>}
+        title={t.itinerary.emptyTitle}
+        description={t.itinerary.emptyBody}
+        action={<Button onClick={() => navigate('/import')}>{t.itinerary.importWorkbook}</Button>}
       />
     );
   }
@@ -99,15 +103,21 @@ export function ItineraryPage({ dayId, selectedItemId, onSelectItem }: Itinerary
   const progress = dayProgressPercent(day, now);
 
   const travelerOptions = [
-    { value: 'all', label: 'All' },
+    { value: 'all', label: t.traveler.all },
     ...trip.travelers.map((traveler) => ({
       value: traveler.id,
-      label: traveler.name,
+      label: travelerName(traveler, t.traveler),
       adornment: (
-        <TravelerAvatar slot={traveler.slot} initials={traveler.initials} label={traveler.name} size={20} decorative />
+        <TravelerAvatar
+          slot={traveler.slot}
+          initials={traveler.initials}
+          label={travelerName(traveler, t.traveler)}
+          size={20}
+          decorative
+        />
       ),
     })),
-    ...(trip.travelers.length > 1 ? [{ value: 'shared', label: 'Shared' }] : []),
+    ...(trip.travelers.length > 1 ? [{ value: 'shared', label: t.traveler.shared }] : []),
   ];
 
   const openItem = (itemId: string) => {
@@ -118,13 +128,13 @@ export function ItineraryPage({ dayId, selectedItemId, onSelectItem }: Itinerary
   return (
     <div>
       <div className={cx(shell.stickyBar, styles.dayBar)}>
-        <div className={styles.dayTabs} role="tablist" aria-label="Trip days" ref={tabsRef}>
+        <div className={styles.dayTabs} role="tablist" aria-label={t.itinerary.tripDays} ref={tabsRef}>
           {trip.days.map((candidate, index) => (
             <DateTab
               key={candidate.id}
               day={candidate.date ? formatWeekdayShort(candidate.date) : '—'}
               date={candidate.date ? formatDayOfMonth(candidate.date) : '?'}
-              label={dayTabLabel(candidate, index, trip)}
+              label={dayTabLabel(t, candidate, index, trip)}
               active={candidate.id === day.id}
               hasWarning={flaggedDays.has(candidate.id)}
               onSelect={() => navigate(`/itinerary/${encodeURIComponent(candidate.id)}`)}
@@ -133,7 +143,7 @@ export function ItineraryPage({ dayId, selectedItemId, onSelectItem }: Itinerary
         </div>
         {travelerOptions.length > 2 ? (
           <Segmented
-            label="Filter by traveler"
+            label={t.traveler.filterLabel}
             options={travelerOptions}
             value={filter}
             onChange={(value) => setPreferences({ travelerFilter: value })}
@@ -144,7 +154,7 @@ export function ItineraryPage({ dayId, selectedItemId, onSelectItem }: Itinerary
       <div className={styles.dayBody}>
         <DaySummary
           as="h1"
-          dateLabel={day.date ? formatDayLabel(day.date) : 'Undated activities'}
+          dateLabel={day.date ? formatDayLabel(day.date) : t.itinerary.undated}
           {...(day.cities.length > 0 ? { placeLabel: day.cities.join(' · ') } : {})}
           activityCount={items.length}
           {...(subtotal ? { costSubtotal: formatMoney(subtotal) } : {})}
@@ -154,17 +164,17 @@ export function ItineraryPage({ dayId, selectedItemId, onSelectItem }: Itinerary
         {items.length === 0 ? (
           <EmptyState
             icon="inbox"
-            title={day.items.length === 0 ? 'Nothing scheduled' : 'Nothing for this traveler'}
+            title={day.items.length === 0 ? t.itinerary.nothingScheduled : t.itinerary.nothingForTraveler}
             description={
               day.items.length === 0
-                ? 'This day has no activities in your workbook.'
-                : `${pluralize(day.items.length, 'activity', 'activities')} on this day, none assigned to this filter.`
+                ? t.itinerary.nothingScheduledBody
+                : t.itinerary.nothingForTravelerBody(day.items.length)
             }
             {...(day.items.length > 0
               ? {
                   action: (
                     <Button variant="secondary" onClick={() => setPreferences({ travelerFilter: 'all' })}>
-                      Show all travelers
+                      {t.itinerary.showAllTravelers}
                     </Button>
                   ),
                 }
@@ -182,11 +192,11 @@ export function ItineraryPage({ dayId, selectedItemId, onSelectItem }: Itinerary
                   <ActivityCard
                     time={
                       <>
-                        {item.start === null ? (item.startText ?? 'Time not given') : formatMinutes(item.start)}
+                        {item.start === null ? (item.startText ?? t.itinerary.timeNotGiven) : formatMinutes(item.start)}
                         {item.durationMinutes ? (
-                          <span className={styles.timeMuted}> · {formatDurationShort(item.durationMinutes)}</span>
+                          <span className={styles.timeMuted}> · {formatDuration(item.durationMinutes)}</span>
                         ) : null}
-                        {item.crossesMidnight ? <span className={styles.overnight}> +1</span> : null}
+                        {item.crossesMidnight ? <span className={styles.overnight}> {t.itinerary.overnightShort}</span> : null}
                       </>
                     }
                     title={item.activity}
@@ -194,24 +204,24 @@ export function ItineraryPage({ dayId, selectedItemId, onSelectItem }: Itinerary
                       ? { route: routeText(item.routeFrom, item.routeTo, item.place)! }
                       : {})}
                     type={item.type}
-                    typeLabel={item.typeLabel}
+                    typeLabel={item.typeLabel ?? t.activityType[item.type]}
                     slot={scopeSlot(item.scope, trip.travelers)}
-                    travelerLabel={scopeLabel(item.scope, trip.travelers)}
+                    travelerLabel={scopeLabel(item.scope, trip.travelers, t.traveler)}
                     bookingRequired={item.bookingRequired}
                     emphasis={emphasis}
-                    {...(connection ? { warning: connection.message } : {})}
+                    {...(connection ? { warning: connectionText(t, connection.message) } : {})}
                     status={
                       booking ? (
                         <BookingStatusChip status={effectiveBookingStatus(booking, overrides)} />
                       ) : overrides.completedItems.includes(item.id) ? (
-                        <Badge tone="success">Done</Badge>
+                        <Badge tone="success">{t.activity.done}</Badge>
                       ) : undefined
                     }
                     traveler={
                       <TravelerAvatar
                         slot={scopeSlot(item.scope, trip.travelers)}
                         initials={scopeInitials(item.scope, trip.travelers)}
-                        label={scopeLabel(item.scope, trip.travelers)}
+                        label={scopeLabel(item.scope, trip.travelers, t.traveler)}
                         size={26}
                         decorative
                       />
@@ -228,22 +238,24 @@ export function ItineraryPage({ dayId, selectedItemId, onSelectItem }: Itinerary
   );
 }
 
-function dayTabLabel(day: ItineraryDay, index: number, trip: Trip): string {
-  if (!day.date) return 'Undated activities';
+function dayTabLabel(t: Messages, day: ItineraryDay, index: number, trip: Trip): string {
+  if (!day.date) return t.itinerary.undated;
   const total = trip.days.filter((candidate) => candidate.date !== null).length;
-  return `${formatFullDate(day.date)}, day ${index + 1} of ${total}`;
+  return t.itinerary.dayTabLabel(formatFullDate(day.date), index + 1, total);
+}
+
+function connectionText(t: Messages, message: ConnectionMessage): string {
+  switch (message.id) {
+    case 'overlaps':
+      return t.itinerary.overlaps(message.title);
+    case 'startsImmediatelyAfter':
+      return t.itinerary.startsImmediatelyAfter(message.title);
+    case 'onlyMinutesAfter':
+      return t.itinerary.onlyMinutesAfter(message.minutes, message.title);
+  }
 }
 
 function routeText(from?: string, to?: string, place?: string): string | null {
   if (from && to) return `${from} → ${to}`;
   return from ?? place ?? null;
-}
-
-/** Compact duration for the card's time line: "6h 35m" is too long beside a clock time. */
-function formatDurationShort(minutes: number): string {
-  const hours = Math.floor(minutes / 60);
-  const rest = minutes % 60;
-  if (hours === 0) return `${rest}m`;
-  if (rest === 0) return `${hours}h`;
-  return `${hours}h ${rest}m`;
 }

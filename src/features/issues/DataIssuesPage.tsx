@@ -4,7 +4,9 @@ import type { IconName } from '../../design-system';
 import shell from '../../app/AppShell.module.css';
 import { useNavigate } from '../../app/router';
 import { useTripContext } from '../../state/TripContext';
-import { pluralize } from '../../lib/format';
+import { useT } from '../../i18n/useT';
+import { renderIssue } from '../../i18n/renderIssue';
+import type { Messages } from '../../i18n/en';
 import type { ImportIssue, ImportIssueKind, IssueSeverity } from '../../domain/types';
 
 const ISSUE_ICON: Record<ImportIssueKind, IconName> = {
@@ -27,12 +29,6 @@ const SEVERITY_TONE: Record<IssueSeverity, 'danger' | 'warning' | 'neutral'> = {
   info: 'neutral',
 };
 
-const SEVERITY_LABEL: Record<IssueSeverity, string> = {
-  critical: 'Blocking',
-  warning: 'Worth checking',
-  info: 'For information',
-};
-
 /**
  * Import issues, in a form the traveler can act on.
  *
@@ -43,6 +39,7 @@ export function DataIssuesPage() {
   const { result, overrides, dismissIssue, restoreIssue } = useTripContext();
   const navigate = useNavigate();
   const toast = useToast();
+  const t = useT();
   const [showDismissed, setShowDismissed] = useState(false);
 
   if (!result) return null;
@@ -54,20 +51,17 @@ export function DataIssuesPage() {
   return (
     <div className={shell.stackLoose}>
       <div>
-        <h1 className={shell.pageTitle}>Data issues</h1>
-        <p className={shell.muted}>
-          What Wayfare could not read cleanly from <b>{result.file.name}</b>. Your original file is never changed —
-          dismissing an issue just marks it as reviewed on this device.
-        </p>
+        <h1 className={shell.pageTitle}>{t.issues.title}</h1>
+        <p className={shell.muted}>{t.issues.intro(result.file.name)}</p>
       </div>
 
       {open.length > 0 || dismissed.length > 0 ? (
         <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
           <Button variant={showDismissed ? 'secondary' : 'primary'} size="sm" onClick={() => setShowDismissed(false)}>
-            Open ({open.length})
+            {t.issues.openTab(open.length)}
           </Button>
           <Button variant={showDismissed ? 'primary' : 'secondary'} size="sm" onClick={() => setShowDismissed(true)}>
-            Reviewed ({dismissed.length})
+            {t.issues.reviewedTab(dismissed.length)}
           </Button>
         </div>
       ) : null}
@@ -75,19 +69,16 @@ export function DataIssuesPage() {
       {shown.length === 0 ? (
         <EmptyState
           icon={showDismissed ? 'inbox' : 'check-circle-2'}
-          title={showDismissed ? 'Nothing reviewed yet' : 'Nothing to fix'}
-          description={
-            showDismissed
-              ? 'Issues you dismiss will be listed here.'
-              : 'Wayfare read every sheet in your workbook without trouble.'
-          }
-          {...(showDismissed ? {} : { action: <Button onClick={() => navigate('/')}>Back to trip</Button> })}
+          title={showDismissed ? t.issues.nothingReviewed : t.issues.nothingToFix}
+          description={showDismissed ? t.issues.nothingReviewedBody : t.issues.nothingToFixBody}
+          {...(showDismissed ? {} : { action: <Button onClick={() => navigate('/')}>{t.issues.backToTrip}</Button> })}
         />
       ) : (
         <section className={shell.stack}>
           {shown.map((issue) => (
             <IssueCard
               key={issue.id}
+              t={t}
               issue={issue}
               dismissed={showDismissed}
               onOpenItem={
@@ -97,11 +88,11 @@ export function DataIssuesPage() {
               }
               onDismiss={() => {
                 dismissIssue(issue.id);
-                toast('Marked as reviewed');
+                toast(t.issues.markedReviewed);
               }}
               onRestore={() => {
                 restoreIssue(issue.id);
-                toast('Moved back to open');
+                toast(t.issues.movedBackToOpen);
               }}
             />
           ))}
@@ -109,15 +100,11 @@ export function DataIssuesPage() {
       )}
 
       {open.length > 0 && !showDismissed ? (
-        <Card eyebrow="What to do about these">
-          <p className={shell.muted}>
-            Fix anything that matters in your spreadsheet and import it again — {pluralize(open.length, 'issue')}{' '}
-            {open.length === 1 ? 'is' : 'are'} listed with the sheet and row number so you can find{' '}
-            {open.length === 1 ? 'it' : 'them'}. Your booking statuses and completed activities carry over.
-          </p>
+        <Card eyebrow={t.issues.whatToDoTitle}>
+          <p className={shell.muted}>{t.issues.whatToDoBody(open.length)}</p>
           <div style={{ marginTop: 'var(--space-3)' }}>
             <Button variant="secondary" onClick={() => navigate('/import')}>
-              Re-import workbook
+              {t.issues.reimport}
             </Button>
           </div>
         </Card>
@@ -127,18 +114,21 @@ export function DataIssuesPage() {
 }
 
 function IssueCard({
+  t,
   issue,
   dismissed,
   onDismiss,
   onRestore,
   onOpenItem,
 }: {
+  t: Messages;
   issue: ImportIssue;
   dismissed: boolean;
   onDismiss: () => void;
   onRestore: () => void;
   onOpenItem?: (() => void) | undefined;
 }) {
+  const { title, detail } = renderIssue(t, issue.message);
   return (
     <Card>
       <div style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'flex-start' }}>
@@ -147,11 +137,11 @@ function IssueCard({
         </span>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center', flexWrap: 'wrap' }}>
-            <h2 style={{ fontSize: 'var(--fs-body-md)', margin: 0 }}>{issue.title}</h2>
-            <Badge tone={SEVERITY_TONE[issue.severity]}>{SEVERITY_LABEL[issue.severity]}</Badge>
+            <h2 style={{ fontSize: 'var(--fs-body-md)', margin: 0 }}>{title}</h2>
+            <Badge tone={SEVERITY_TONE[issue.severity]}>{t.severity[issue.severity]}</Badge>
           </div>
           <p className={shell.muted} style={{ marginTop: 'var(--space-2)' }}>
-            {issue.detail}
+            {detail}
           </p>
           {issue.origin ? (
             <p
@@ -162,18 +152,18 @@ function IssueCard({
                 marginTop: 'var(--space-2)',
               }}
             >
-              {issue.origin.sheet} · row {issue.origin.row}
+              {t.issues.sheetRow(issue.origin.sheet, issue.origin.row)}
             </p>
           ) : null}
           <div style={{ display: 'flex', gap: 'var(--space-2)', marginTop: 'var(--space-3)', flexWrap: 'wrap' }}>
             {onOpenItem ? (
               <Button variant="secondary" size="sm" onClick={onOpenItem}>
-                Open activity
+                {t.issues.openActivity}
               </Button>
             ) : null}
             {dismissed ? (
               <Button variant="secondary" size="sm" onClick={onRestore}>
-                Move back to open
+                {t.issues.moveBackToOpen}
               </Button>
             ) : (
               <Button
@@ -181,9 +171,9 @@ function IssueCard({
                 size="sm"
                 onClick={onDismiss}
                 disabled={issue.severity === 'critical'}
-                title={issue.severity === 'critical' ? 'Blocking issues cannot be dismissed' : undefined}
+                title={issue.severity === 'critical' ? t.issues.cannotDismissCritical : undefined}
               >
-                Mark as reviewed
+                {t.issues.markReviewed}
               </Button>
             )}
           </div>

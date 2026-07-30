@@ -5,7 +5,7 @@
  * needs *something* describing an activity to be kept. Every field we could not read
  * becomes an issue rather than a fabricated value.
  */
-import type { ItineraryItem, RowOrigin, TravelerScope } from '../../domain/types';
+import type { ItineraryItem, PracticalField, RowOrigin, TravelerScope } from '../../domain/types';
 import type { ItineraryField } from '../aliases';
 import { ITINERARY_ALIASES } from '../aliases';
 import { bookingActionIsRequired, classifyActivityType } from '../classify';
@@ -26,13 +26,8 @@ export interface ItineraryMapResult {
   headerRow: number | null;
 }
 
-const PRACTICAL_FIELDS: { field: ItineraryField; label: string }[] = [
-  { field: 'food', label: 'Food' },
-  { field: 'toilet', label: 'Toilet' },
-  { field: 'shower', label: 'Shower' },
-  { field: 'sleep', label: 'Sleep' },
-  { field: 'recovery', label: 'Rest & recovery' },
-];
+/** The practical-need columns, in the order they are shown on the activity detail. */
+const PRACTICAL_FIELDS: PracticalField[] = ['food', 'toilet', 'shower', 'sleep', 'recovery'];
 
 export function mapItinerarySheet(
   grid: Grid,
@@ -47,8 +42,7 @@ export function mapItinerarySheet(
   if (headerRow === null) {
     issues.add({
       kind: 'missing-field',
-      title: `No column headers found in "${grid.name}"`,
-      detail: 'This sheet was detected as an itinerary but no header row could be identified, so no activities were imported from it.',
+      message: { id: 'noHeaders', sheet: grid.name, role: 'itinerary' },
       severity: 'critical',
     });
     return { items: [], mapped: [], unmapped: [], headerRow: null };
@@ -58,11 +52,7 @@ export function mapItinerarySheet(
   const { columns, mapped, unmapped } = resolveHeaders<ItineraryField>(headers, ITINERARY_ALIASES);
 
   if (columns.activity === undefined && columns.route === undefined) {
-    issues.add({
-      kind: 'missing-field',
-      title: `No activity column in "${grid.name}"`,
-      detail: 'Wayfare could not find a column describing what happens (tried: activity, description, item, title). Activities were imported using whatever other columns matched.',
-    });
+    issues.add({ kind: 'missing-field', message: { id: 'noActivityColumn', sheet: grid.name } });
   }
 
   const items: ItineraryItem[] = [];
@@ -97,8 +87,7 @@ export function mapItinerarySheet(
     } else if (dateOutcome.reason === 'invalid') {
       issues.add({
         kind: 'invalid-date',
-        title: 'Date could not be read',
-        detail: `"${readText(cell('date'))}" in ${grid.name} row ${excelRow} is not a date Wayfare recognizes. The activity was kept but placed under the previous day.`,
+        message: { id: 'invalidDate', value: readText(cell('date')), sheet: grid.name, row: excelRow },
         origin,
       });
       date = carriedDate;
@@ -116,16 +105,14 @@ export function mapItinerarySheet(
     if (startOutcome.ok === false && startOutcome.reason === 'invalid') {
       issues.add({
         kind: 'invalid-date',
-        title: 'Start time could not be read',
-        detail: `"${readText(cell('start'))}" in ${grid.name} row ${excelRow} is not a time Wayfare recognizes.`,
+        message: { id: 'invalidStartTime', value: readText(cell('start')), sheet: grid.name, row: excelRow },
         origin,
       });
     }
     if (endOutcome.ok === false && endOutcome.reason === 'invalid') {
       issues.add({
         kind: 'invalid-date',
-        title: 'End time could not be read',
-        detail: `"${readText(cell('end'))}" in ${grid.name} row ${excelRow} is not a time Wayfare recognizes.`,
+        message: { id: 'invalidEndTime', value: readText(cell('end')), sheet: grid.name, row: excelRow },
         origin,
       });
     }
@@ -148,8 +135,14 @@ export function mapItinerarySheet(
         } else if (Math.abs(durationMinutes - overnight) > 60) {
           issues.add({
             kind: 'time-conflict',
-            title: 'Duration does not match the times',
-            detail: `${grid.name} row ${excelRow} runs past midnight (${readText(cell('start'))} → ${readText(cell('end'))}) but states a duration of ${readText(cell('duration'))}. Both values were kept as written.`,
+            message: {
+              id: 'durationConflict',
+              sheet: grid.name,
+              row: excelRow,
+              start: readText(cell('start')),
+              end: readText(cell('end')),
+              duration: readText(cell('duration')),
+            },
             origin,
           });
         }
@@ -172,16 +165,14 @@ export function mapItinerarySheet(
     if (!baseOutcome.ok && baseOutcome.reason === 'invalid') {
       issues.add({
         kind: 'invalid-number',
-        title: 'Cost could not be read',
-        detail: `"${readText(cell('baseCost'))}" in ${grid.name} row ${excelRow} is not an amount Wayfare recognizes, so it is not counted in the budget.`,
+        message: { id: 'invalidCost', value: readText(cell('baseCost')), sheet: grid.name, row: excelRow },
         origin,
       });
     }
     if (columns.currency !== undefined && readText(cell('currency')) && rowCurrency === undefined) {
       issues.add({
         kind: 'invalid-currency',
-        title: 'Currency not recognized',
-        detail: `"${readText(cell('currency'))}" in ${grid.name} row ${excelRow} is not a currency code Wayfare recognizes. Amounts are shown without conversion.`,
+        message: { id: 'unknownCurrency', value: readText(cell('currency')), sheet: grid.name, row: excelRow },
         origin,
       });
     }
@@ -192,8 +183,7 @@ export function mapItinerarySheet(
     if (!url && sourceCell && looksLikeBrokenUrl(readText(sourceCell))) {
       issues.add({
         kind: 'broken-url',
-        title: 'Source link is not usable',
-        detail: `"${readText(sourceCell)}" in ${grid.name} row ${excelRow} looks like a link but could not be opened. The text was kept in the activity's notes.`,
+        message: { id: 'brokenUrlItinerary', value: readText(sourceCell), sheet: grid.name, row: excelRow },
         origin,
       });
     }
@@ -208,8 +198,7 @@ export function mapItinerarySheet(
     if (segmentText && !classified.matched) {
       issues.add({
         kind: 'unrecognized-column',
-        title: 'Segment type not recognized',
-        detail: `"${segmentText}" in ${grid.name} row ${excelRow} did not match a known activity type. It is shown as written, with a generic icon.`,
+        message: { id: 'unknownSegmentType', value: segmentText, sheet: grid.name, row: excelRow },
         origin,
         severity: 'info',
       });
@@ -219,8 +208,8 @@ export function mapItinerarySheet(
     const { from, to } = splitRoute(routeText);
     const bookingAction = readText(cell('booking'));
 
-    const practical = PRACTICAL_FIELDS.map(({ field, label }) => ({
-      label,
+    const practical = PRACTICAL_FIELDS.map((field) => ({
+      field,
       value: readText(cell(field)),
     })).filter((entry) => entry.value.length > 0);
 
@@ -230,8 +219,7 @@ export function mapItinerarySheet(
     if (duplicateOf !== undefined) {
       issues.add({
         kind: 'duplicate',
-        title: 'Duplicate activity',
-        detail: `${grid.name} row ${excelRow} repeats "${title}" at the same date and time as row ${duplicateOf}. Both are shown.`,
+        message: { id: 'duplicateActivity', sheet: grid.name, row: excelRow, title, firstRow: duplicateOf },
         origin,
       });
     } else {
@@ -243,8 +231,7 @@ export function mapItinerarySheet(
     if (scope.kind === 'unassigned') {
       issues.add({
         kind: 'missing-traveler',
-        title: 'No traveler assigned',
-        detail: `"${title}" (${grid.name} row ${excelRow}) does not say which traveler it is for. It is shown for everyone and excluded from per-traveler totals.`,
+        message: { id: 'missingTraveler', title, sheet: grid.name, row: excelRow },
         origin,
         relatedItemId: id,
       });
@@ -260,7 +247,6 @@ export function mapItinerarySheet(
       durationDerived,
       crossesMidnight,
       type: classified.type,
-      typeLabel: classified.label,
       activity: title,
       practical,
       bookingRequired: bookingActionIsRequired(bookingAction),
@@ -276,6 +262,7 @@ export function mapItinerarySheet(
     if (country) item.country = country;
     const city = readText(cell('city'));
     if (city) item.city = city;
+    if (classified.label !== null) item.typeLabel = classified.label;
     if (segmentText && !classified.matched) item.rawType = segmentText;
     if (from) item.routeFrom = from;
     if (to) item.routeTo = to;
@@ -291,11 +278,7 @@ export function mapItinerarySheet(
   }
 
   if (items.length === 0) {
-    issues.add({
-      kind: 'empty-sheet',
-      title: `No activities found in "${grid.name}"`,
-      detail: 'The sheet was detected as an itinerary but every row below the header was empty.',
-    });
+    issues.add({ kind: 'empty-sheet', message: { id: 'noActivitiesFound', sheet: grid.name } });
   }
 
   return { items, mapped, unmapped, headerRow };

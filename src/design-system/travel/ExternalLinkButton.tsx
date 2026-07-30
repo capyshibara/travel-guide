@@ -1,6 +1,7 @@
 import styles from './travel.module.css';
 import { Icon } from '../Icon';
 import { isSafeExternalUrl } from '../../lib/url';
+import { useT } from '../../i18n/useT';
 
 export interface ExternalLinkButtonProps {
   href: string;
@@ -12,13 +13,14 @@ export interface ExternalLinkButtonProps {
  * disabled-looking link that silently does nothing would be worse than no link.
  * `rel="noopener noreferrer"` is set because the target is workbook-supplied.
  */
-export function ExternalLinkButton({ href, label = 'View source' }: ExternalLinkButtonProps) {
+export function ExternalLinkButton({ href, label }: ExternalLinkButtonProps) {
+  const t = useT();
   if (!isSafeExternalUrl(href)) return null;
   return (
     <a className={styles.externalLink} href={href} target="_blank" rel="noopener noreferrer">
-      {label}
+      {label ?? t.common.viewSource}
       <Icon name="external-link" size="xs" />
-      <span className="visually-hidden">(opens in a new tab)</span>
+      <span className="visually-hidden">{t.common.opensInNewTab}</span>
     </a>
   );
 }

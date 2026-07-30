@@ -3,18 +3,21 @@ import styles from './feedback.module.css';
 import { cx } from '../../lib/cx';
 import { Button } from '../core/Button';
 import { useDialogLayer } from './useDialogLayer';
+import { useT } from '../../i18n/useT';
+
 
 export interface BottomSheetProps {
   open: boolean;
   title: string;
   children: ReactNode;
   onClose: () => void;
-  /** Label for the closing action. Defaults to "Close". */
+  /** Overrides the default "Close" wording. */
   closeLabel?: string;
 }
 
 /** Mobile-first slide-up panel. Same dialog semantics as Modal, different geometry. */
-export function BottomSheet({ open, title, children, onClose, closeLabel = 'Close' }: BottomSheetProps) {
+export function BottomSheet({ open, title, children, onClose, closeLabel }: BottomSheetProps) {
+  const t = useT();
   const ref = useDialogLayer(open, onClose);
   const titleId = useId();
   if (!open) return null;
@@ -34,7 +37,7 @@ export function BottomSheet({ open, title, children, onClose, closeLabel = 'Clos
         {children}
         <div style={{ marginTop: 'var(--space-4)' }}>
           <Button variant="secondary" fullWidth onClick={onClose}>
-            {closeLabel}
+            {closeLabel ?? t.common.close}
           </Button>
         </div>
       </div>

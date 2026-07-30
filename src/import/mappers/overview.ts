@@ -64,7 +64,7 @@ export function mapOverviewSheet(
 ): OverviewFacts {
   const facts: OverviewFacts = { destinations: [], exchangeRates: [], assumptions: [], extras: [] };
   /** Values seen for "Traveler A departure city" style labels. */
-  const declaredTravelers: { name: string; city?: string }[] = [];
+  const declaredTravelers: { name: string; city?: string; generated?: boolean }[] = [];
 
   for (let r = 0; r < grid.rows.length; r += 1) {
     const row = grid.rows[r];
@@ -87,7 +87,7 @@ export function mapOverviewSheet(
     // Traveler-specific rows: "Traveler A departure city", "Alice — departs from".
     const travelerLabel = /^(?:traveler|traveller)\s*([a-z0-9]+)/i.exec(label);
     if (travelerLabel && /depart|from|origin|city|airport/i.test(label)) {
-      declaredTravelers.push({ name: `Traveler ${travelerLabel[1]!.toUpperCase()}`, city: valueText });
+      declaredTravelers.push({ name: `Traveler ${travelerLabel[1]!.toUpperCase()}`, city: valueText, generated: true });
       continue;
     }
 
@@ -95,7 +95,7 @@ export function mapOverviewSheet(
     if (field === null) {
       // Unlabelled prose in an overview sheet is usually a note worth surfacing.
       if (label.length > 24 && valueCells.length === 0) {
-        facts.assumptions.push(makeAssumption(grid.name, excelRow, 'Note', label));
+        facts.assumptions.push(makeAssumption(grid.name, excelRow, 'note', label));
       } else {
         facts.extras.push({ label, value: valueText });
       }
@@ -107,15 +107,14 @@ export function mapOverviewSheet(
 
   // Seed the traveler roster before any itinerary row is read.
   for (const declared of declaredTravelers) {
-    registry.declare(declared.name, declared.city);
+    registry.declare(declared.name, declared.city, declared.generated ?? false);
   }
   if (facts.travelerCount !== undefined) {
     registry.ensureCount(facts.travelerCount);
     if (registry.list().length < facts.travelerCount) {
       issues.add({
         kind: 'missing-field',
-        title: 'Fewer travelers than stated',
-        detail: `The overview says ${facts.travelerCount} travelers but only ${registry.list().length} could be identified by name. Placeholder travelers were added.`,
+        message: { id: 'fewerTravelers', stated: facts.travelerCount, found: registry.list().length },
       });
     }
   }
@@ -125,7 +124,7 @@ export function mapOverviewSheet(
 
 interface ApplyContext {
   facts: OverviewFacts;
-  declaredTravelers: { name: string; city?: string }[];
+  declaredTravelers: { name: string; city?: string; generated?: boolean }[];
   label: string;
   valueText: string;
   firstValue: Cell;
@@ -155,8 +154,13 @@ function applyField(field: OverviewField, ctx: ApplyContext): void {
       } else {
         issues.add({
           kind: 'invalid-date',
-          title: `Trip ${field === 'startDate' ? 'start' : 'end'} date could not be read`,
-          detail: `"${valueText}" in ${grid.name} row ${origin.row} is not a date Wayfare recognizes. Dates were taken from the itinerary instead.`,
+          message: {
+            id: 'invalidTripDate',
+            which: field === 'startDate' ? 'start' : 'end',
+            value: valueText,
+            sheet: grid.name,
+            row: origin.row,
+          },
           origin,
         });
       }
@@ -204,7 +208,7 @@ function applyField(field: OverviewField, ctx: ApplyContext): void {
       cities.forEach((city, index) => {
         const existing = ctx.declaredTravelers[index];
         if (existing) existing.city ??= city;
-        else ctx.declaredTravelers.push({ name: `Traveler ${String.fromCharCode(65 + index)}`, city });
+        else ctx.declaredTravelers.push({ name: `Traveler ${String.fromCharCode(65 + index)}`, city, generated: true });
       });
       return;
     }
@@ -213,15 +217,14 @@ function applyField(field: OverviewField, ctx: ApplyContext): void {
       const rates = parseExchangeRates(valueText);
       if (rates.length > 0) {
         facts.exchangeRates.push(...rates);
-        facts.assumptions.push(makeAssumption(grid.name, origin.row, 'Exchange rate', valueText));
+        facts.assumptions.push(makeAssumption(grid.name, origin.row, 'exchangeRate', valueText));
       } else {
         issues.add({
           kind: 'invalid-currency',
-          title: 'Exchange rate could not be read',
-          detail: `"${valueText}" in ${grid.name} row ${origin.row} is not in a form Wayfare can read (expected something like "1 USD = 15,500 IDR"). Converted amounts are not shown.`,
+          message: { id: 'invalidExchangeRate', value: valueText, sheet: grid.name, row: origin.row },
           origin,
         });
-        facts.assumptions.push(makeAssumption(grid.name, origin.row, 'Exchange rate', valueText));
+        facts.assumptions.push(makeAssumption(grid.name, origin.row, 'exchangeRate', valueText));
       }
       return;
     }
@@ -246,8 +249,7 @@ function applyField(field: OverviewField, ctx: ApplyContext): void {
       if (!outcome.ok) {
         issues.add({
           kind: 'invalid-number',
-          title: 'Budget figure could not be read',
-          detail: `"${valueText}" in ${grid.name} row ${origin.row} is not an amount Wayfare recognizes. Totals were calculated from the itinerary instead.`,
+          message: { id: 'invalidBudgetFigure', value: valueText, sheet: grid.name, row: origin.row },
           origin,
         });
         return;
@@ -260,11 +262,11 @@ function applyField(field: OverviewField, ctx: ApplyContext): void {
     }
 
     case 'assumption':
-      facts.assumptions.push(makeAssumption(grid.name, origin.row, 'Assumption', valueText));
+      facts.assumptions.push(makeAssumption(grid.name, origin.row, 'assumption', valueText));
       return;
 
     case 'warning':
-      facts.assumptions.push(makeAssumption(grid.name, origin.row, 'Recheck', valueText, 'recheck'));
+      facts.assumptions.push(makeAssumption(grid.name, origin.row, 'recheck', valueText, 'recheck'));
       return;
   }
 }
@@ -272,11 +274,11 @@ function applyField(field: OverviewField, ctx: ApplyContext): void {
 function makeAssumption(
   sheet: string,
   row: number,
-  label: string,
+  labelKey: Assumption['labelKey'],
   detail: string,
   kind: Assumption['kind'] = 'assumption',
 ): Assumption {
-  return { id: stableId('assume', [sheet, row, detail]), label, detail, kind };
+  return { id: stableId('assume', [sheet, row, detail]), labelKey, detail, kind };
 }
 
 /** Split "Vietnam, Singapore, Indonesia" or "Hanoi → Singapore → Java". */

@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import styles from './travel.module.css';
+import { useT } from '../../i18n/useT';
 
 export interface BookingChecklistRowProps {
   item: string;
@@ -23,6 +24,7 @@ export function BookingChecklistRow({
   traveler,
   actions,
 }: BookingChecklistRowProps) {
+  const t = useT();
   return (
     <article className={styles.bookingRow}>
       <div className={styles.bookingTop}>
@@ -39,12 +41,12 @@ export function BookingChecklistRow({
           <span>
             {targetPrice ? (
               <>
-                Target <b className={styles.bookingPriceStrong}>{targetPrice}</b>
+                {t.bookings.target} <b className={styles.bookingPriceStrong}>{targetPrice}</b>
               </>
             ) : (
-              'No target price'
+              t.bookings.noTargetPrice
             )}
-            {fallbackPrice ? ` · Fallback ${fallbackPrice}` : ''}
+            {fallbackPrice ? ` · ${t.bookings.fallback} ${fallbackPrice}` : ''}
           </span>
           {traveler}
         </div>

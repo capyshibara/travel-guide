@@ -1,5 +1,6 @@
 import styles from './travel.module.css';
 import { formatDuration, formatMinutes } from '../../lib/format';
+import { useT } from '../../i18n/useT';
 
 export interface TimeDurationBlockProps {
   start: number | null;
@@ -23,6 +24,7 @@ export function TimeDurationBlock({
   durationMinutes,
   crossesMidnight,
 }: TimeDurationBlockProps) {
+  const t = useT();
   const startLabel = start === null ? (startText ?? '—') : formatMinutes(start);
   const endLabel = end === null ? endText : formatMinutes(end);
 
@@ -32,7 +34,7 @@ export function TimeDurationBlock({
         {startLabel}
         {endLabel ? `–${endLabel}` : ''}
       </span>
-      {crossesMidnight ? <span className={styles.overnightTag}>+1 day</span> : null}
+      {crossesMidnight ? <span className={styles.overnightTag}>{t.itinerary.overnight}</span> : null}
       {durationMinutes ? <span className={styles.timeDuration}>{formatDuration(durationMinutes)}</span> : null}
     </div>
   );

@@ -2,6 +2,7 @@ import styles from './travel.module.css';
 import { cx } from '../../lib/cx';
 import { formatConverted, formatMoney } from '../../lib/format';
 import type { CostScenario, Money } from '../../domain/types';
+import { useT } from '../../i18n/useT';
 
 export interface CostDisplayProps {
   amount: Money | null | undefined;
@@ -23,7 +24,8 @@ export function CostDisplay({
   showScenarioLabel,
   align = 'end',
 }: CostDisplayProps) {
-  if (!amount) return <span className={styles.costConverted}>Not priced</span>;
+  const t = useT();
+  if (!amount) return <span className={styles.costConverted}>{t.common.notPriced}</span>;
   const convertedLabel = formatConverted(converted);
 
   return (
@@ -34,7 +36,7 @@ export function CostDisplay({
       {convertedLabel ? <span className={styles.costConverted}>{convertedLabel}</span> : null}
       {showScenarioLabel ? (
         <span className={cx(styles.costScenario, scenario === 'fallback' && styles.costScenarioFallback)}>
-          {scenario}
+          {scenario === 'base' ? t.scenario.baseLower : t.scenario.fallbackLower}
         </span>
       ) : null}
     </div>

@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import styles from './travel.module.css';
+import { useT } from '../../i18n/useT';
 
 export interface TripSummaryStat {
   label: string;
@@ -24,8 +25,9 @@ export interface TripSummaryCardProps {
  * The trip title is the Trip Home page's `h1`; this card is only used there.
  */
 export function TripSummaryCard({ title, subtitle, travelers, countdown, upNext, stats }: TripSummaryCardProps) {
+  const t = useT();
   return (
-    <section className={styles.hero} aria-label="Trip summary">
+    <section className={styles.hero} aria-label={t.home.tripSummary}>
       <div>
         <h1 className={styles.heroTitle}>{title}</h1>
         <div className={styles.heroSub}>{subtitle}</div>

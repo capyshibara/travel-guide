@@ -2,6 +2,7 @@ import { useId, useRef, useState, type DragEvent } from 'react';
 import styles from './import.module.css';
 import { cx } from '../../lib/cx';
 import { Icon } from '../Icon';
+import { useT } from '../../i18n/useT';
 
 export interface FileUploadZoneProps {
   onFile: (file: File) => void;
@@ -15,6 +16,7 @@ export interface FileUploadZoneProps {
  * get the platform's own file picker; the drop handling is layered on top of it.
  */
 export function FileUploadZone({ onFile, disabled }: FileUploadZoneProps) {
+  const t = useT();
   const [dragging, setDragging] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const id = useId();
@@ -53,8 +55,8 @@ export function FileUploadZone({ onFile, disabled }: FileUploadZoneProps) {
         }}
       />
       <Icon name="upload-cloud" size="xl" />
-      <p className={styles.dropTitle}>Drop your workbook here</p>
-      <span className={styles.dropHint}>or tap to browse · .xlsx, .xlsm up to 20 MB</span>
+      <p className={styles.dropTitle}>{t.import.dropHere}</p>
+      <span className={styles.dropHint}>{t.import.dropHint}</span>
     </label>
   );
 }

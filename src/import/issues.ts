@@ -1,10 +1,11 @@
 /**
  * Collecting import issues.
  *
- * Ids are derived from the issue's content rather than a counter, so dismissing an
- * issue and re-importing the same workbook does not resurrect it.
+ * Issues carry a message *code* plus its data, never prose — see `IssueMessage`.
+ * Ids are derived from that content rather than a counter, so dismissing an issue and
+ * re-importing the same workbook does not resurrect it.
  */
-import type { ImportIssue, ImportIssueKind, IssueSeverity, RowOrigin } from '../domain/types';
+import type { ImportIssue, ImportIssueKind, IssueMessage, IssueSeverity, RowOrigin } from '../domain/types';
 import { stableId } from '../lib/id';
 
 const SEVERITY: Record<ImportIssueKind, IssueSeverity> = {
@@ -27,16 +28,17 @@ export class IssueCollector {
 
   add(input: {
     kind: ImportIssueKind;
-    title: string;
-    detail: string;
+    message: IssueMessage;
     origin?: RowOrigin;
     relatedItemId?: string;
     severity?: IssueSeverity;
   }): void {
     const origin = input.origin;
+    // The id covers every field of the message, so two issues that differ only in a
+    // quoted value stay distinct.
     const id = stableId('issue', [
       input.kind,
-      input.title,
+      JSON.stringify(input.message),
       origin ? `${origin.sheet}:${origin.row}` : '',
       input.relatedItemId ?? '',
     ]);
@@ -47,8 +49,7 @@ export class IssueCollector {
       id,
       kind: input.kind,
       severity: input.severity ?? SEVERITY[input.kind],
-      title: input.title,
-      detail: input.detail,
+      message: input.message,
     };
     if (origin) issue.origin = origin;
     if (input.relatedItemId) issue.relatedItemId = input.relatedItemId;
@@ -65,13 +66,20 @@ export class IssueCollector {
   }
 }
 
-/** Thrown when the file cannot be read at all — surfaced as a friendly error state. */
+/**
+ * Thrown when the file cannot be read at all.
+ *
+ * Carries a code rather than prose so the error state can be shown in the reader's
+ * language; `fileName` is the only variable part.
+ */
+export type WorkbookErrorCode = 'tooLarge' | 'empty' | 'wrongFormat' | 'unreadable' | 'noSheets';
+
 export class WorkbookReadError extends Error {
   constructor(
-    message: string,
-    readonly hint: string,
+    readonly code: WorkbookErrorCode,
+    readonly fileName?: string,
   ) {
-    super(message);
+    super(code);
     this.name = 'WorkbookReadError';
   }
 }

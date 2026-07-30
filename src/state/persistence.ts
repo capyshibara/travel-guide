@@ -10,6 +10,7 @@
  * so a returning traveler does not have to re-upload it.
  */
 import type { BookingStatus, ImportResult } from '../domain/types';
+import { detectLanguage, isLanguage, type Language } from '../i18n/locale';
 
 const DB_NAME = 'wayfare';
 const DB_VERSION = 1;
@@ -30,6 +31,7 @@ export interface Preferences {
   scenario: 'base' | 'fallback';
   travelerFilter: string;
   theme: 'light' | 'dark' | 'system';
+  language: Language;
 }
 
 export const DEFAULT_OVERRIDES: UserOverrides = {
@@ -42,6 +44,8 @@ export const DEFAULT_PREFERENCES: Preferences = {
   scenario: 'base',
   travelerFilter: 'all',
   theme: 'system',
+  // Overridden by the browser's own preference on first load, in `loadPreferences`.
+  language: 'en',
 };
 
 /** What we keep between visits. */
@@ -128,17 +132,21 @@ export async function clearTrip(): Promise<void> {
 export function loadPreferences(): Preferences {
   try {
     const raw = localStorage.getItem(PREFS_KEY);
-    if (!raw) return DEFAULT_PREFERENCES;
+    // No stored choice yet: follow the browser rather than defaulting to English.
+    if (!raw) return { ...DEFAULT_PREFERENCES, language: detectLanguage() };
     const parsed: unknown = JSON.parse(raw);
-    if (typeof parsed !== 'object' || parsed === null) return DEFAULT_PREFERENCES;
+    if (typeof parsed !== 'object' || parsed === null) {
+      return { ...DEFAULT_PREFERENCES, language: detectLanguage() };
+    }
     const candidate = parsed as Partial<Preferences>;
     return {
       scenario: candidate.scenario === 'fallback' ? 'fallback' : 'base',
       travelerFilter: typeof candidate.travelerFilter === 'string' ? candidate.travelerFilter : 'all',
       theme: candidate.theme === 'dark' || candidate.theme === 'light' ? candidate.theme : 'system',
+      language: isLanguage(candidate.language) ? candidate.language : detectLanguage(),
     };
   } catch {
-    return DEFAULT_PREFERENCES;
+    return { ...DEFAULT_PREFERENCES, language: detectLanguage() };
   }
 }
 

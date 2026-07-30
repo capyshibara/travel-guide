@@ -32,44 +32,27 @@ function classify<T extends string>(
   return { value: fallback, matched: false };
 }
 
-const TYPE_LABELS: Record<ActivityType, string> = {
-  flight: 'Flight',
-  transport: 'Transport',
-  food: 'Food',
-  hotel: 'Hotel',
-  sleep: 'Sleep',
-  sightseeing: 'Sightseeing',
-  tour: 'Tour',
-  prep: 'Prep',
-  arrival: 'Arrival',
-  rest: 'Rest',
-  other: 'Activity',
-};
-
-export function activityTypeLabel(type: ActivityType): string {
-  return TYPE_LABELS[type];
-}
-
 /**
  * Classify a segment type. When the workbook's own segment column is blank we look at
  * the activity description, which usually names the mode ("Flight HAN → SIN").
+ *
+ * `label` is the workbook's own wording, or null when we inferred the type ourselves —
+ * the UI then shows a translated label for `type` rather than an English one we made up.
  */
 export function classifyActivityType(
   segmentText: string,
   activityText: string,
-): { type: ActivityType; label: string; matched: boolean } {
+): { type: ActivityType; label: string | null; matched: boolean } {
+  const written = cleanText(segmentText);
   const primary = classify<ActivityType>(segmentText, ACTIVITY_TYPE_ALIASES, 'other');
   if (primary.matched) {
-    // Keep the workbook's own wording as the label when it had one.
-    const label = cleanText(segmentText) || TYPE_LABELS[primary.value];
-    return { type: primary.value, label: titleCaseFirst(label), matched: true };
+    return { type: primary.value, label: written ? titleCaseFirst(written) : null, matched: true };
   }
 
   const secondary = classifyFromDescription(activityText);
-  if (secondary) return { type: secondary, label: TYPE_LABELS[secondary], matched: false };
+  if (secondary) return { type: secondary, label: null, matched: false };
 
-  const label = cleanText(segmentText);
-  return { type: 'other', label: label ? titleCaseFirst(label) : TYPE_LABELS.other, matched: false };
+  return { type: 'other', label: written ? titleCaseFirst(written) : null, matched: false };
 }
 
 /** Word-boundary scan of a free-text description for a mode keyword. */

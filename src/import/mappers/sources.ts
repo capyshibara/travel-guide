@@ -28,11 +28,7 @@ const RECHECK_WORDS = /\b(unconfirmed|uncertain|recheck|re-check|verify|check ag
 export function mapSourceSheet(grid: Grid, issues: IssueCollector): SourceMapResult {
   const headerRow = findHeaderRow(grid, 2);
   if (headerRow === null) {
-    issues.add({
-      kind: 'missing-field',
-      title: `No column headers found in "${grid.name}"`,
-      detail: 'This sheet looked like a source list but no header row could be identified, so nothing was imported from it.',
-    });
+    issues.add({ kind: 'missing-field', message: { id: 'noHeaders', sheet: grid.name, role: 'sources' } });
     return { items: [], mapped: [], unmapped: [] };
   }
 
@@ -63,8 +59,7 @@ export function mapSourceSheet(grid: Grid, issues: IssueCollector): SourceMapRes
     if (broken) {
       issues.add({
         kind: 'broken-url',
-        title: 'Source link is not usable',
-        detail: `"${urlText}" in ${grid.name} row ${excelRow} looks like a link but could not be opened. The source is marked "Needs recheck".`,
+        message: { id: 'brokenUrlSource', value: urlText, sheet: grid.name, row: excelRow },
         origin,
       });
     }
@@ -84,15 +79,16 @@ export function mapSourceSheet(grid: Grid, issues: IssueCollector): SourceMapRes
     const sourceKey = `${grid.name}|${topic}|${fact}`;
     const source: Source = {
       id: stableId('src', [sourceKey, excelRow]),
-      topic: topic || 'Untitled topic',
+      topic,
       fact: fact || notes,
       kind,
       relatedItemIds: [],
     };
     if (url) source.url = url;
     if (notes) source.notes = notes;
-    // Keep an unusable link visible as text rather than dropping what the author wrote.
-    else if (broken) source.notes = `Link as written: ${urlText}`;
+    // Keep an unusable link visible rather than dropping what the author wrote. The
+    // UI labels it; only the author's own text is stored.
+    if (broken) source.brokenUrlText = urlText;
 
     items.push(source);
   }

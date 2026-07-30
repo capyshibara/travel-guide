@@ -11,11 +11,11 @@ import {
   visibleIssues,
 } from '../selectors';
 import { convert } from '../money';
-import type { ItineraryDay, ItineraryItem, Traveler, Trip, TravelerScope } from '../types';
+import type { ImportIssue, ItineraryDay, ItineraryItem, Traveler, Trip, TravelerScope } from '../types';
 import { DEFAULT_OVERRIDES } from '../../state/persistence';
 
-const A: Traveler = { id: 'a', name: 'Traveler A', initials: 'A', slot: 'a' };
-const B: Traveler = { id: 'b', name: 'Traveler B', initials: 'B', slot: 'b' };
+const A: Traveler = { id: 'a', name: 'Traveler A', initials: 'A', slot: 'a', generatedName: true };
+const B: Traveler = { id: 'b', name: 'Traveler B', initials: 'B', slot: 'b', generatedName: true };
 
 const shared = (): TravelerScope => ({ travelerIds: ['a', 'b'], kind: 'shared' });
 const only = (id: string): TravelerScope => ({ travelerIds: [id], kind: 'individual' });
@@ -145,7 +145,7 @@ describe('findConnections', () => {
     expect(connections).toHaveLength(1);
     expect(connections[0]?.itemId).toBe(train.id);
     expect(connections[0]?.kind).toBe('tight');
-    expect(connections[0]?.message).toContain('Flight in');
+    expect(connections[0]?.message).toEqual({ id: 'onlyMinutesAfter', minutes: 15, title: 'Flight in' });
   });
 
   it('flags an overlap for the same traveler', () => {
@@ -263,9 +263,19 @@ describe('convert', () => {
 
 describe('visibleIssues', () => {
   it('hides issues the traveler has reviewed', () => {
-    const issues = [
-      { id: 'x', kind: 'broken-url' as const, severity: 'info' as const, title: 'A', detail: 'a' },
-      { id: 'y', kind: 'missing-traveler' as const, severity: 'warning' as const, title: 'B', detail: 'b' },
+    const issues: ImportIssue[] = [
+      {
+        id: 'x',
+        kind: 'broken-url',
+        severity: 'info',
+        message: { id: 'brokenUrlSource', value: 'x', sheet: 'Sources', row: 2 },
+      },
+      {
+        id: 'y',
+        kind: 'missing-traveler',
+        severity: 'warning',
+        message: { id: 'missingTraveler', title: 'Ferry', sheet: 'Itinerary', row: 3 },
+      },
     ];
     const overrides = { ...DEFAULT_OVERRIDES, dismissedIssues: ['x'] };
     expect(visibleIssues(issues, overrides).map((i) => i.id)).toEqual(['y']);

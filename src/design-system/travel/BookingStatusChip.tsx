@@ -2,14 +2,7 @@ import styles from './travel.module.css';
 import { cx } from '../../lib/cx';
 import { Icon, type IconName } from '../Icon';
 import type { BookingStatus } from '../../domain/types';
-
-export const BOOKING_STATUS_LABEL: Record<BookingStatus, string> = {
-  'not-started': 'Not started',
-  researching: 'Researching',
-  ready: 'Ready to book',
-  booked: 'Booked',
-  confirmed: 'Confirmed',
-};
+import { useT } from '../../i18n/useT';
 
 /** Each status gets its own glyph, so the chips are distinguishable without colour. */
 const STATUS_ICON: Record<BookingStatus, IconName> = {
@@ -33,10 +26,11 @@ export interface BookingStatusChipProps {
 }
 
 export function BookingStatusChip({ status }: BookingStatusChipProps) {
+  const t = useT();
   return (
     <span className={cx(styles.statusChip, STATUS_CLASS[status])}>
       <Icon name={STATUS_ICON[status]} size="xs" />
-      {BOOKING_STATUS_LABEL[status]}
+      {t.bookingStatus[status]}
     </span>
   );
 }

@@ -16,15 +16,34 @@ import { useNavigate } from '../../app/router';
 import { useTripContext } from '../../state/TripContext';
 import { WorkbookReadError } from '../../import/issues';
 import { actionableIssueCount, visibleIssues } from '../../domain/selectors';
-import { formatBytes, pluralize } from '../../lib/format';
-
-const STEPS = ['Reading file', 'Detecting sheets', 'Extracting data', 'Ready'] as const;
+import { formatBytes } from '../../lib/format';
+import { useT } from '../../i18n/useT';
+import type { Messages } from '../../i18n/en';
 
 type Stage = 'idle' | 'working' | 'done' | 'failed';
 
+/** A read failure carries only a code; the wording is chosen here, in the active language. */
 interface Failure {
   title: string;
   hint: string;
+}
+
+function describeFailure(t: Messages, error: unknown): Failure {
+  if (!(error instanceof WorkbookReadError)) {
+    return { title: t.errors.unexpected.title, hint: t.errors.unexpected.detail };
+  }
+  switch (error.code) {
+    case 'tooLarge':
+      return { title: t.errors.tooLarge.title, hint: t.errors.tooLarge.detail };
+    case 'empty':
+      return { title: t.errors.empty.title, hint: t.errors.empty.detail };
+    case 'wrongFormat':
+      return { title: t.errors.wrongFormat.title, hint: t.errors.wrongFormat.detail(error.fileName ?? '') };
+    case 'noSheets':
+      return { title: t.errors.noSheets.title, hint: t.errors.noSheets.detail };
+    case 'unreadable':
+      return { title: t.errors.unreadable.title, hint: t.errors.unreadable.detail };
+  }
 }
 
 /**
@@ -36,10 +55,12 @@ interface Failure {
 export function ImportPage() {
   const { result, overrides, setImportResult, storage } = useTripContext();
   const navigate = useNavigate();
+  const t = useT();
 
   const [stage, setStage] = useState<Stage>(result ? 'done' : 'idle');
   const [step, setStep] = useState(0);
-  const [failure, setFailure] = useState<Failure | null>(null);
+  // Stored as a code so the message re-renders in the right language if it changes.
+  const [failure, setFailure] = useState<unknown>(null);
   const [sampleAvailable, setSampleAvailable] = useState(true);
   const liveRef = useRef<HTMLParagraphElement>(null);
 
@@ -60,14 +81,7 @@ export function ImportPage() {
         setImportResult(imported);
         setStage('done');
       } catch (error) {
-        if (error instanceof WorkbookReadError) {
-          setFailure({ title: error.message, hint: error.hint });
-        } else {
-          setFailure({
-            title: "Wayfare couldn't read that workbook",
-            hint: 'Something went wrong while reading the file. Try re-saving it as .xlsx and uploading again.',
-          });
-        }
+        setFailure(error);
         setStage('failed');
       }
     },
@@ -94,23 +108,24 @@ export function ImportPage() {
   if (stage === 'working') {
     return (
       <div className={shell.stackLoose}>
-        <h1 className={shell.pageTitle}>Reading your workbook…</h1>
-        <ImportProgressStepper steps={STEPS} current={step} />
-        <ProgressBar value={((step + 1) / STEPS.length) * 100} label="Import progress" />
+        <h1 className={shell.pageTitle}>{t.import.reading}</h1>
+        <ImportProgressStepper steps={t.import.steps} current={step} />
+        <ProgressBar value={((step + 1) / t.import.steps.length) * 100} label={t.import.progress} />
       </div>
     );
   }
 
-  if (stage === 'failed' && failure) {
+  if (stage === 'failed') {
+    const described = describeFailure(t, failure);
     return (
       <ErrorState
-        title={failure.title}
-        description={failure.hint}
+        title={described.title}
+        description={described.hint}
         onRetry={() => {
           setStage('idle');
           setFailure(null);
         }}
-        retryLabel="Choose another file"
+        retryLabel={t.import.chooseAnotherFile}
       />
     );
   }
@@ -119,38 +134,38 @@ export function ImportPage() {
     const remaining = visibleIssues(result.issues, overrides);
     const needsAttention = actionableIssueCount(result.issues, overrides);
     const used = result.sheets.filter((sheet) => sheet.role !== 'unknown');
+    const activityCount = result.trip.days.reduce((sum, day) => sum + day.items.length, 0);
 
     return (
       <div className={shell.stackLoose}>
         <div>
-          <p className={shell.eyebrow}>Import complete</p>
+          <p className={shell.eyebrow}>{t.import.complete}</p>
           <h1 className={shell.pageTitle} tabIndex={-1} ref={liveRef as never}>
-            {pluralize(used.length, 'sheet')} read from {result.file.name}
+            {t.import.readFrom(used.length, result.file.name)}
           </h1>
           <p className={shell.muted}>
-            {formatBytes(result.file.size)} · {pluralize(result.trip.days.length, 'day')} ·{' '}
-            {pluralize(result.trip.days.reduce((sum, day) => sum + day.items.length, 0), 'activity', 'activities')} ·{' '}
-            {pluralize(result.trip.bookings.length, 'booking')} · {pluralize(result.trip.sources.length, 'source')}
+            {formatBytes(result.file.size)} · {t.common.days(result.trip.days.length)} ·{' '}
+            {t.common.activities(activityCount)} · {t.common.bookings(result.trip.bookings.length)} ·{' '}
+            {t.common.sources(result.trip.sources.length)}
           </p>
         </div>
 
         {result.partial ? (
-          <AssumptionCallout kind="recheck" label="Partial import">
-            Some of the workbook could not be read. Everything Wayfare did understand is available — check Data issues
-            for what is missing.
+          <AssumptionCallout kind="recheck" label={t.import.partialTitle}>
+            {t.import.partialBody}
           </AssumptionCallout>
         ) : null}
 
         {needsAttention > 0 ? (
           <DataWarningBanner
             count={needsAttention}
-            message={`${pluralize(needsAttention, 'thing')} ${needsAttention === 1 ? 'needs' : 'need'} a look — missing fields, unreadable values or broken links.`}
+            message={t.import.needsLook(needsAttention)}
             onReview={() => navigate('/issues')}
           />
         ) : null}
 
         <section className={shell.stack}>
-          <h2 className={shell.sectionTitle}>Detected sheets</h2>
+          <h2 className={shell.sectionTitle}>{t.import.detectedSheets}</h2>
           {result.sheets.map((sheet) => (
             <SheetDetectionCard
               key={sheet.name}
@@ -164,14 +179,14 @@ export function ImportPage() {
 
         <div className={shell.stack}>
           <Button size="lg" fullWidth onClick={() => navigate('/')}>
-            View trip
+            {t.import.viewTrip}
           </Button>
           <Button variant="secondary" fullWidth onClick={() => setStage('idle')}>
-            Import a different workbook
+            {t.import.importAnother}
           </Button>
           {remaining.length > 0 ? (
             <Button variant="ghost" fullWidth onClick={() => navigate('/issues')}>
-              Review {pluralize(remaining.length, 'data issue')}
+              {t.import.reviewIssues(remaining.length)}
             </Button>
           ) : null}
         </div>
@@ -182,48 +197,43 @@ export function ImportPage() {
   return (
     <div className={shell.stackLoose}>
       <div>
-        <h1 className={shell.pageTitle}>Upload your trip workbook</h1>
-        <p className={shell.muted}>
-          Wayfare turns your planning spreadsheet into a day-by-day guide. Supports .xlsx and .xlsm, up to 20 MB.
-        </p>
+        <h1 className={shell.pageTitle}>{t.import.title}</h1>
+        <p className={shell.muted}>{t.import.intro}</p>
       </div>
 
       <FileUploadZone onFile={(file) => void runImport(file)} />
 
       {sampleAvailable ? (
         <Button variant="ghost" fullWidth onClick={() => void loadSample()}>
-          Or try the sample workbook
+          {t.import.trySample}
         </Button>
       ) : null}
 
-      <Card eyebrow="Your data stays here">
+      <Card eyebrow={t.import.privacyTitle}>
         <p className={shell.muted}>
-          Your workbook is read entirely inside your browser. Nothing is uploaded, and no part of it is sent anywhere.
-          {storage === 'unavailable'
-            ? ' This browser will not let Wayfare save anything locally, so your trip will be lost when you close the tab.'
-            : ' The trip Wayfare builds is saved on this device so you can come back to it, and you can delete it at any time from More.'}
+          {t.import.privacyBody}
+          {storage === 'unavailable' ? t.import.privacyUnavailable : t.import.privacyStored}
         </p>
       </Card>
 
-      <Card eyebrow="What Wayfare looks for">
+      <Card eyebrow={t.import.looksForTitle}>
         <ul className={shell.muted} style={{ margin: 0, paddingLeft: 'var(--space-5)' }}>
           <li>
-            <b>Overview</b> — trip title, dates, travelers, exchange rates, budget totals
+            <b>{t.sheetRole.overview}</b> — {t.import.looksForOverview}
           </li>
           <li>
-            <b>Itinerary</b> — one row per activity, with dates, times, places and costs
+            <b>{t.sheetRole.itinerary}</b> — {t.import.looksForItinerary}
           </li>
           <li>
-            <b>Booking options</b> — what to book, when, and for how much
+            <b>{t.sheetRole.bookings}</b> — {t.import.looksForBookings}
           </li>
           <li>
-            <b>Sources</b> — the facts and assumptions behind the plan
+            <b>{t.sheetRole.sources}</b> — {t.import.looksForSources}
           </li>
         </ul>
         <p className={shell.muted} style={{ marginTop: 'var(--space-3)', display: 'flex', gap: 'var(--space-2)' }}>
           <Icon name="info" size="xs" />
-          Sheet names and column headings do not have to match exactly — Wayfare recognizes common variations and tells
-          you what it could not place.
+          {t.import.aliasesNote}
         </p>
       </Card>
     </div>

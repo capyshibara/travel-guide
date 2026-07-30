@@ -36,7 +36,7 @@ export { ActivityTypeBadge, ACTIVITY_ICON } from './travel/ActivityTypeBadge';
 export { TimeDurationBlock } from './travel/TimeDurationBlock';
 export { RouteDisplay } from './travel/RouteDisplay';
 export { CostDisplay } from './travel/CostDisplay';
-export { BookingStatusChip, BOOKING_STATUS_LABEL } from './travel/BookingStatusChip';
+export { BookingStatusChip } from './travel/BookingStatusChip';
 export { ExternalLinkButton } from './travel/ExternalLinkButton';
 export { ActivityCard, TimelineRail } from './travel/ActivityCard';
 export { DaySummary } from './travel/DaySummary';

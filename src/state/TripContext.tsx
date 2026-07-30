@@ -77,7 +77,14 @@ function reducer(state: TripState, action: TripAction): TripState {
       return { ...state, result: action.result };
 
     case 'cleared':
-      return { ...state, result: null, overrides: DEFAULT_OVERRIDES, preferences: DEFAULT_PREFERENCES };
+      // Language and theme are the traveler's own choices, not trip data — clearing the
+      // workbook should not silently switch the interface back to English.
+      return {
+        ...state,
+        result: null,
+        overrides: DEFAULT_OVERRIDES,
+        preferences: { ...DEFAULT_PREFERENCES, language: state.preferences.language, theme: state.preferences.theme },
+      };
 
     case 'bookingStatus':
       return {
@@ -132,7 +139,12 @@ export interface TripContextValue extends TripState {
 const TripContext = createContext<TripContextValue | null>(null);
 
 export function TripProvider({ children }: { children: ReactNode }) {
-  const [state, dispatch] = useReducer(reducer, INITIAL);
+  // Preferences are read synchronously so the very first render already uses the
+  // stored language; the trip itself is async and arrives with the `hydrated` action.
+  const [state, dispatch] = useReducer(reducer, INITIAL, (initial) => ({
+    ...initial,
+    preferences: loadPreferences(),
+  }));
 
   // Hydrate once on mount.
   useEffect(() => {

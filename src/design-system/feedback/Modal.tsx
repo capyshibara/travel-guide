@@ -4,6 +4,8 @@ import { cx } from '../../lib/cx';
 import { IconButton } from '../core/IconButton';
 import { Icon } from '../Icon';
 import { useDialogLayer } from './useDialogLayer';
+import { useT } from '../../i18n/useT';
+
 
 export interface ModalProps {
   open: boolean;
@@ -14,6 +16,7 @@ export interface ModalProps {
 }
 
 export function Modal({ open, title, children, onClose, actions }: ModalProps) {
+  const t = useT();
   const ref = useDialogLayer(open, onClose);
   const titleId = useId();
   if (!open) return null;
@@ -31,7 +34,7 @@ export function Modal({ open, title, children, onClose, actions }: ModalProps) {
           <h2 className={styles.modalTitle} id={titleId}>
             {title}
           </h2>
-          <IconButton icon={<Icon name="x" size="sm" />} label="Close" onClick={onClose} />
+          <IconButton icon={<Icon name="x" size="sm" />} label={t.common.close} onClick={onClose} />
         </div>
         <div className={styles.modalBody}>{children}</div>
         {actions ? <div className={styles.modalActions}>{actions}</div> : null}

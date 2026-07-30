@@ -1,5 +1,6 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { ErrorState } from '../design-system';
+import { useT } from '../i18n/useT';
 
 interface Props {
   children: ReactNode;
@@ -35,12 +36,12 @@ export class ErrorBoundary extends Component<Props, State> {
 
   override render() {
     if (!this.state.hasError) return this.props.children;
-    return (
-      <ErrorState
-        title={this.props.title ?? 'Something went wrong showing this'}
-        description="Your workbook data is untouched. Try again, or go back and pick another section."
-        onRetry={this.handleRetry}
-      />
-    );
+    return <BoundaryFallback {...(this.props.title ? { title: this.props.title } : {})} onRetry={this.handleRetry} />;
   }
+}
+
+/** Split out so the copy can come from the catalogue, which a class component cannot read. */
+function BoundaryFallback({ title, onRetry }: { title?: string; onRetry: () => void }) {
+  const t = useT();
+  return <ErrorState title={title ?? t.errors.boundaryTitle} description={t.errors.boundaryBody} onRetry={onRetry} />;
 }

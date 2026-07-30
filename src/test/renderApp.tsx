@@ -9,6 +9,7 @@ import { render } from '@testing-library/react';
 import type { ReactElement } from 'react';
 import { buildTrip } from '../import/buildTrip';
 import type { ImportResult } from '../domain/types';
+import type { Language } from '../i18n/locale';
 import {
   ITINERARY_HEADER,
   OVERVIEW_ROWS,
@@ -72,10 +73,10 @@ export interface HarnessOptions {
  * Install the persistence stub. Must be called before the module under test imports
  * `state/persistence`, so tests call it at module scope via `vi.mock`'s factory.
  */
-export function persistenceStub(getResult: () => ImportResult | null) {
+export function persistenceStub(getResult: () => ImportResult | null, getLanguage: () => Language = () => 'en') {
   return {
     DEFAULT_OVERRIDES: { bookingStatus: {}, completedItems: [], dismissedIssues: [] },
-    DEFAULT_PREFERENCES: { scenario: 'base', travelerFilter: 'all', theme: 'system' },
+    DEFAULT_PREFERENCES: { scenario: 'base', travelerFilter: 'all', theme: 'system', language: 'en' },
     storageStatus: () => 'ready' as const,
     loadTrip: vi.fn(async () => {
       const result = getResult();
@@ -85,7 +86,12 @@ export function persistenceStub(getResult: () => ImportResult | null) {
     }),
     saveTrip: vi.fn(async () => true),
     clearTrip: vi.fn(async () => undefined),
-    loadPreferences: () => ({ scenario: 'base' as const, travelerFilter: 'all', theme: 'system' as const }),
+    loadPreferences: () => ({
+      scenario: 'base' as const,
+      travelerFilter: 'all',
+      theme: 'system' as const,
+      language: getLanguage(),
+    }),
     savePreferences: vi.fn(),
   };
 }

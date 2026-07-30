@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import styles from './travel.module.css';
 import { cx } from '../../lib/cx';
+import { useT } from '../../i18n/useT';
 
 export interface SegmentedOption {
   value: string;
@@ -49,8 +50,9 @@ export interface ScenarioToggleProps {
 
 /** Segmented control switching every cost on the page between base and fallback. */
 export function ScenarioToggle({ value, onChange }: ScenarioToggleProps) {
+  const t = useT();
   return (
-    <div className={styles.scenarioToggle} role="group" aria-label="Cost scenario">
+    <div className={styles.scenarioToggle} role="group" aria-label={t.scenario.label}>
       {(['base', 'fallback'] as const).map((scenario) => (
         <button
           key={scenario}
@@ -59,7 +61,7 @@ export function ScenarioToggle({ value, onChange }: ScenarioToggleProps) {
           className={cx(styles.scenarioOption, value === scenario && styles.scenarioOptionActive)}
           onClick={() => onChange(scenario)}
         >
-          {scenario === 'base' ? 'Base' : 'Fallback'}
+          {scenario === 'base' ? t.scenario.base : t.scenario.fallback}
         </button>
       ))}
     </div>

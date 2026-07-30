@@ -1,4 +1,5 @@
 import styles from './travel.module.css';
+import { useT } from '../../i18n/useT';
 
 export interface DaySummaryProps {
   /**
@@ -16,13 +17,14 @@ export interface DaySummaryProps {
 
 /** Sits above each day's timeline: what day, where, how many activities, what it costs. */
 export function DaySummary({ as: Heading = 'h2', dateLabel, placeLabel, activityCount, costSubtotal, progress }: DaySummaryProps) {
+  const t = useT();
   return (
     <div className={styles.daySummary}>
       <div>
         <Heading className={styles.dayTitle}>{dateLabel}</Heading>
         <div className={styles.daySub}>
           {placeLabel ? `${placeLabel} · ` : ''}
-          {activityCount === 1 ? '1 activity' : `${activityCount} activities`}
+          {t.common.activities(activityCount)}
         </div>
       </div>
       <div className={styles.dayCost}>
@@ -34,7 +36,7 @@ export function DaySummary({ as: Heading = 'h2', dateLabel, placeLabel, activity
             aria-valuenow={Math.round(progress)}
             aria-valuemin={0}
             aria-valuemax={100}
-            aria-label="Progress through today"
+            aria-label={t.itinerary.progressThroughDay}
           >
             <div className={styles.dayProgressFill} style={{ width: `${Math.min(100, Math.max(0, progress))}%` }} />
           </div>

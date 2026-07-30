@@ -20,6 +20,8 @@ export type IsoDate = string;
 /** Minutes from midnight, 0–1439. */
 export type MinuteOfDay = number;
 
+export type PracticalField = 'food' | 'toilet' | 'shower' | 'sleep' | 'recovery';
+
 export type ActivityType =
   | 'flight'
   | 'transport'
@@ -50,13 +52,19 @@ export interface Money {
 
 export interface Traveler {
   id: string;
-  /** Name from the workbook, or a generated "Traveler A" style label. */
+  /**
+   * Name exactly as the workbook wrote it. Empty when the workbook only gave a
+   * traveler count — the UI then renders a translated "Traveler A" style label from
+   * `slot`, so the placeholder follows the reader's language.
+   */
   name: string;
   /** 1–2 characters for the avatar. */
   initials: string;
   departureCity?: string;
   /** Drives the traveler color system: first traveler is `a`, second `b`, rest cycle. */
   slot: 'a' | 'b' | 'c' | 'd';
+  /** True when `name` is our placeholder rather than the workbook's own wording. */
+  generatedName: boolean;
 }
 
 /** Who an itinerary item or cost belongs to. */
@@ -68,11 +76,14 @@ export interface TravelerScope {
 
 export interface Source {
   id: string;
+  /** The workbook's own topic. Empty when it gave none — the UI supplies a label. */
   topic: string;
   /** The fact or assumption this source supports. */
   fact: string;
   url?: string;
   notes?: string;
+  /** A link that would not parse, kept verbatim so nothing the author wrote is lost. */
+  brokenUrlText?: string;
   /** 'verified' when a usable URL is present, else 'assumption'. Never invented. */
   kind: 'verified' | 'assumption' | 'recheck';
   /** Ids of itinerary items / booking items this source was matched to. */
@@ -81,7 +92,8 @@ export interface Source {
 
 export interface Assumption {
   id: string;
-  label: string;
+  /** Which heading to show. The detail below it is the workbook's own text. */
+  labelKey: 'assumption' | 'recheck' | 'verified' | 'note' | 'exchangeRate';
   detail: string;
   kind: 'assumption' | 'verified' | 'recheck';
 }
@@ -104,7 +116,11 @@ export interface ItineraryItem {
   country?: string;
   city?: string;
   type: ActivityType;
-  typeLabel: string;
+  /**
+   * The workbook's own wording for the segment type. Absent when we inferred the type
+   * ourselves, in which case the UI shows a translated label for `type`.
+   */
+  typeLabel?: string;
   /** Raw segment-type text from the workbook, kept when we could not classify it. */
   rawType?: string;
   activity: string;
@@ -112,8 +128,11 @@ export interface ItineraryItem {
   routeTo?: string;
   place?: string;
   notes?: string;
-  /** Food / toilet / shower / sleep / recovery notes, kept as labelled pairs. */
-  practical: { label: string; value: string }[];
+  /**
+   * Food / toilet / shower / sleep / recovery notes. The key is ours (and translated
+   * on render); the value is the workbook's own text.
+   */
+  practical: { field: PracticalField; value: string }[];
   bookingAction?: string;
   bookingRequired: boolean;
   baseCost?: Money;
@@ -158,12 +177,17 @@ export interface BookingItem {
   origin: RowOrigin;
 }
 
-export type BudgetCategory = string;
+/** Categories we derive ourselves, which therefore need translating. */
+export type DerivedCategory =
+  | 'flights' | 'localTransport' | 'food' | 'lodging' | 'tours' | 'preparation' | 'other';
 
 export interface BudgetEntry {
   id: string;
   label: string;
-  category: BudgetCategory;
+  /** Set when the category came from a budget sheet — shown verbatim. */
+  category?: string;
+  /** Set when we derived the category from the activity type — translated on render. */
+  categoryKey?: DerivedCategory;
   base?: Money;
   fallback?: Money;
   scope: TravelerScope;
@@ -202,13 +226,50 @@ export type ImportIssueKind =
 
 export type IssueSeverity = 'critical' | 'warning' | 'info';
 
+/**
+ * What an import issue says, as a code plus its data — never as prose.
+ *
+ * The parsed result is persisted, so prose baked in at import time could not be
+ * re-rendered if the reader later switches language. Keeping the message as a code
+ * also stops the parsing layer from owning presentation copy.
+ *
+ * Values quoted back from the workbook (`value`, `title`, `columns`) are the author's
+ * own text and are shown verbatim in every language.
+ */
+export type IssueMessage =
+  | { id: 'emptySheet'; sheet: string }
+  | { id: 'unmappedSheet'; sheet: string; guess: string }
+  | { id: 'noItinerarySheet' }
+  | { id: 'unconvertibleCosts'; count: number; currencies: string; target: string; labels: string }
+  | { id: 'unmappedColumns'; count: number; sheet: string; columns: string }
+  | { id: 'noHeaders'; sheet: string; role: SheetRole }
+  | { id: 'noActivityColumn'; sheet: string }
+  | { id: 'invalidDate'; value: string; sheet: string; row: number }
+  | { id: 'invalidStartTime'; value: string; sheet: string; row: number }
+  | { id: 'invalidEndTime'; value: string; sheet: string; row: number }
+  | { id: 'durationConflict'; sheet: string; row: number; start: string; end: string; duration: string }
+  | { id: 'invalidCost'; value: string; sheet: string; row: number }
+  | { id: 'unknownCurrency'; value: string; sheet: string; row: number }
+  | { id: 'brokenUrlItinerary'; value: string; sheet: string; row: number }
+  | { id: 'unknownSegmentType'; value: string; sheet: string; row: number }
+  | { id: 'duplicateActivity'; sheet: string; row: number; title: string; firstRow: number }
+  | { id: 'missingTraveler'; title: string; sheet: string; row: number }
+  | { id: 'noActivitiesFound'; sheet: string }
+  | { id: 'unknownBookingTiming'; value: string; sheet: string; row: number; item: string }
+  | { id: 'unknownBookingStatus'; value: string; sheet: string; row: number; item: string }
+  | { id: 'brokenUrlBooking'; value: string; sheet: string; row: number }
+  | { id: 'brokenUrlSource'; value: string; sheet: string; row: number }
+  | { id: 'fewerTravelers'; stated: number; found: number }
+  | { id: 'invalidTripDate'; which: 'start' | 'end'; value: string; sheet: string; row: number }
+  | { id: 'invalidExchangeRate'; value: string; sheet: string; row: number }
+  | { id: 'invalidBudgetFigure'; value: string; sheet: string; row: number };
+
 export interface ImportIssue {
   /** Deterministic, so a dismissal survives a re-import of the same workbook. */
   id: string;
   kind: ImportIssueKind;
   severity: IssueSeverity;
-  title: string;
-  detail: string;
+  message: IssueMessage;
   origin?: RowOrigin;
   /** Item this issue is attached to, when it is row-level. */
   relatedItemId?: string;

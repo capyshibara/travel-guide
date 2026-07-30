@@ -16,6 +16,7 @@ Everything happens in your browser. Your workbook is never uploaded.
 - [Workbook format](#workbook-format)
 - [Recognized sheets and columns](#recognized-sheets-and-columns)
 - [How values are interpreted](#how-values-are-interpreted)
+- [Languages](#languages)
 - [Privacy and local processing](#privacy-and-local-processing)
 - [Clearing your data](#clearing-your-data)
 - [Architecture](#architecture)
@@ -41,6 +42,9 @@ Upload an `.xlsx` or `.xlsm` workbook. Wayfare works out what each sheet is for,
 | **Data issues** | Everything that couldn't be read cleanly, with the sheet and row to fix |
 
 Anything Wayfare cannot read becomes a reported issue rather than a silent gap or an invented value.
+
+The interface is available in **English** and **Vietnamese** (**More → Appearance → Language**). Your workbook's own
+words are never translated — see [Languages](#languages).
 
 ## Getting started
 
@@ -79,6 +83,11 @@ Then open the printed URL. There is a **sample workbook** on the import screen i
 3. Push to `main`. The first run creates the `github-pages` environment automatically.
 
 Your site appears at `https://<username>.github.io/<repository>/`.
+
+If the deploy job fails with **"Branch is not allowed to deploy to github-pages"**, the environment has a deployment
+branch rule that does not match the branch you pushed. Fix it under **Settings → Environments → github-pages →
+Deployment branches and tags** — either allow `main`, or set the rule to "No restriction". This most often bites when
+`main` is not the repository's default branch.
 
 ### Why it works under a subpath
 
@@ -191,6 +200,40 @@ city` · `base currency` · `exchange rate` · `base budget` · `fallback budget
 
 Nothing is invented. Every unreadable value becomes an entry on the **Data issues** page with its sheet and row.
 
+## Languages
+
+Wayfare's interface ships in **English** and **Vietnamese**, picked under **More → Appearance → Language**. On a first
+visit the language is taken from the browser's own preference; after that your choice is remembered on the device and
+survives clearing the trip.
+
+The dividing line is deliberate and load-bearing:
+
+| | Language |
+| --- | --- |
+| Wayfare's own chrome — navigation, buttons, headings, empty states, warnings | Translated |
+| Text the traveler wrote — activity names, places, notes, booking actions, source facts, traveler names, category and column wording | **Shown verbatim, always** |
+| Prose Wayfare generates *about* your data — data-issue titles and explanations, "Overlaps X", "Day 4 of 13" | Translated |
+| Placeholders Wayfare invented — "Traveler A" where the workbook gave only a head count or a bare "A" | Translated |
+
+So a Vietnamese workbook opened with the English interface keeps its Vietnamese activity names, and an English workbook
+opened with the Vietnamese interface keeps its English ones. Translating a traveler's own itinerary would be a bug.
+
+Dates, numbers and currency follow the chosen language, but keep your region where the two agree: an American reading
+the English interface still gets `Aug 17` and `$16.13`, while the Vietnamese interface gives `17 thg 8` and `16,13 US$`.
+
+### Adding a language
+
+1. Copy `src/i18n/vi.ts`, translate the values, and type the export as `Messages`.
+2. Add the code to `LANGUAGES` and `CATALOGUES` in `src/i18n/locale.ts`, and set `meta.locale` to a BCP 47 tag.
+3. Check the fonts cover the script — the three families are loaded with their `latin`, `latin-ext` and `vietnamese`
+   subsets, so a new script may need another `@fontsource` subset in `src/styles/tokens/fonts.css`.
+
+`Messages` is derived from `src/i18n/en.ts`, so anything missing from a new catalogue is a **compile error**, not a
+blank space at runtime. There is no silent fall-back to English.
+
+`src/i18n/en.ts` is the only place UI copy lives; parsing code carries message *codes* (`IssueMessage`,
+`ConnectionMessage`) and never prose, which is what makes generated sentences translatable at render time.
+
 ## Privacy and local processing
 
 - Your workbook is parsed **entirely in your browser**. It is never uploaded, and no analytics, telemetry or error
@@ -221,6 +264,7 @@ src/
 │   ├── roles.ts       Which sheet is which
 │   ├── mappers/       One per sheet role
 │   └── buildTrip.ts   Orchestration -> ImportResult
+├── i18n/            Message catalogues (en, vi), active-language runtime
 ├── design-system/   Reusable components, built from the Wayfare design system
 ├── features/        One folder per page
 ├── state/           Trip context + typed IndexedDB/localStorage abstraction
@@ -235,6 +279,8 @@ Key decisions:
 - **Imported ids are content-derived** (`stableId`), so re-importing a corrected workbook keeps your booking statuses,
   completed activities and dismissed issues.
 - **Imported data is immutable.** Your own edits live alongside it as `overrides`, never mixed in.
+- **The parser never produces prose.** Anything it needs to say is a typed message code that the UI words in the active
+  language, so the same import reads correctly in either language without being re-parsed.
 - **The parser is code-split.** SheetJS is ~400 kB and only needed at import time, so the initial load is ~94 kB gzipped.
 
 ### About the SheetJS dependency
@@ -324,3 +370,9 @@ Targeting WCAG 2.2 AA:
 - **Very large workbooks** (>20 MB) are refused, since the whole file is parsed in memory in the browser.
 - **Dark mode** is implemented and selectable under More, but the design system ships light as the default and light is
   what has been visually reviewed in depth.
+- **The Vietnamese catalogue has not been reviewed by a native speaker.** It is complete and consistent, and the
+  register was chosen deliberately (plain imperative, dropped pronouns, no plural inflection), but a native pass would
+  be worth having before it is relied on. Every string is in one file, `src/i18n/vi.ts`.
+- **The sample workbook is written in English.** The language switch changes Wayfare's own wording, so the sample's
+  activity names stay English in the Vietnamese interface — that is the intended behaviour, not a gap, but it means the
+  sample does not demonstrate a Vietnamese-language workbook.

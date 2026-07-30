@@ -1,6 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import styles from './feedback.module.css';
 import { Icon } from '../Icon';
+import { useT } from '../../i18n/useT';
+
 
 export type ToastTone = 'neutral' | 'success' | 'warning' | 'danger';
 
@@ -46,6 +48,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 }
 
 function ToastItem({ toast, onDismiss }: { toast: ToastRecord; onDismiss: (id: number) => void }) {
+  const t = useT();
   useEffect(() => {
     const timer = window.setTimeout(() => onDismiss(toast.id), AUTO_DISMISS_MS);
     return () => window.clearTimeout(timer);
@@ -55,7 +58,7 @@ function ToastItem({ toast, onDismiss }: { toast: ToastRecord; onDismiss: (id: n
     <div className={styles.toast}>
       <span className={styles.toastDot} style={{ background: TONE_COLOR[toast.tone] }} aria-hidden="true" />
       <span className={styles.toastText}>{toast.message}</span>
-      <button type="button" className={styles.toastClose} onClick={() => onDismiss(toast.id)} aria-label="Dismiss">
+      <button type="button" className={styles.toastClose} onClick={() => onDismiss(toast.id)} aria-label={t.common.dismiss}>
         <Icon name="x" size="xs" />
       </button>
     </div>

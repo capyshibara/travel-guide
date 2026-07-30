@@ -2,6 +2,7 @@ import { useId } from 'react';
 import styles from './navigation.module.css';
 import { cx } from '../../lib/cx';
 import { Icon } from '../Icon';
+import { useT } from '../../i18n/useT';
 
 export interface FilterOption {
   value: string;
@@ -24,13 +25,14 @@ export interface SearchFilterSortProps {
 export function SearchFilterSort({
   query,
   onQuery,
-  placeholder = 'Search',
+  placeholder,
   label,
   filters,
   activeFilter,
   onFilter,
-  filterLabel = 'Filter',
+  filterLabel,
 }: SearchFilterSortProps) {
+  const t = useT();
   const id = useId();
   return (
     <div className={styles.searchWrap}>
@@ -44,12 +46,12 @@ export function SearchFilterSort({
           type="search"
           className={styles.searchInput}
           value={query}
-          placeholder={placeholder}
+          placeholder={placeholder ?? t.common.search}
           onChange={(event) => onQuery(event.target.value)}
         />
       </div>
       {filters && filters.length > 0 && onFilter ? (
-        <div className={styles.filterRow} role="group" aria-label={filterLabel}>
+        <div className={styles.filterRow} role="group" aria-label={filterLabel ?? t.common.filter}>
           {filters.map((filter) => {
             const active = filter.value === activeFilter;
             return (

@@ -1,5 +1,6 @@
 import styles from './travel.module.css';
 import { cx } from '../../lib/cx';
+import { useT } from '../../i18n/useT';
 
 export interface BudgetSummaryCardProps {
   label: string;
@@ -39,6 +40,7 @@ export interface CategoryBreakdownProps {
  * off and to a screen reader.
  */
 export function CategoryBreakdown({ categories, label }: CategoryBreakdownProps) {
+  const t = useT();
   const total = categories.reduce((sum, category) => sum + Math.max(category.value, 0), 0);
 
   return (
@@ -51,7 +53,7 @@ export function CategoryBreakdown({ categories, label }: CategoryBreakdownProps)
               <dt className={styles.breakdownLabel}>{category.label}</dt>
               <dd className={styles.breakdownValue}>
                 {category.display}
-                <span className="visually-hidden"> — {percent.toFixed(0)}% of the total</span>
+                <span className="visually-hidden"> {t.budget.percentOfTotal(percent.toFixed(0))}</span>
               </dd>
             </div>
             <div className={styles.breakdownTrack} aria-hidden="true">

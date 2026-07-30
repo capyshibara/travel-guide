@@ -9,6 +9,7 @@
 import type {
   ActivityType,
   BudgetEntry,
+  DerivedCategory,
   ExchangeRate,
   ImportResult,
   ItineraryDay,
@@ -36,35 +37,29 @@ import { convert } from '../domain/money';
 
 const MAX_BYTES = 20 * 1024 * 1024;
 
-const CATEGORY_BY_TYPE: Record<ActivityType, string> = {
-  flight: 'Flights',
-  transport: 'Local transport',
-  food: 'Food',
-  hotel: 'Lodging',
-  sleep: 'Lodging',
-  sightseeing: 'Tours & activities',
-  tour: 'Tours & activities',
-  prep: 'Preparation',
-  arrival: 'Local transport',
-  rest: 'Other',
-  other: 'Other',
+const CATEGORY_BY_TYPE: Record<ActivityType, DerivedCategory> = {
+  flight: 'flights',
+  transport: 'localTransport',
+  food: 'food',
+  hotel: 'lodging',
+  sleep: 'lodging',
+  sightseeing: 'tours',
+  tour: 'tours',
+  prep: 'preparation',
+  arrival: 'localTransport',
+  rest: 'other',
+  other: 'other',
 };
 
 export async function importWorkbook(file: File): Promise<ImportResult> {
   if (file.size > MAX_BYTES) {
-    throw new WorkbookReadError(
-      'That file is larger than 20 MB',
-      'Wayfare reads the whole workbook in your browser, so very large files are not supported. Try removing unused sheets and exporting again.',
-    );
+    throw new WorkbookReadError('tooLarge');
   }
   if (file.size === 0) {
-    throw new WorkbookReadError('That file is empty', 'The file has no contents. Check the export and try again.');
+    throw new WorkbookReadError('empty');
   }
   if (!/\.(xlsx|xlsm)$/i.test(file.name)) {
-    throw new WorkbookReadError(
-      'Wayfare reads .xlsx and .xlsm workbooks',
-      `"${file.name}" is not a format Wayfare can read. In Excel or Google Sheets, export as .xlsx and try again.`,
-    );
+    throw new WorkbookReadError('wrongFormat', file.name);
   }
 
   const buffer = await file.arrayBuffer();
@@ -84,14 +79,11 @@ export async function importWorkbook(file: File): Promise<ImportResult> {
   } catch {
     // The underlying SheetJS error is deliberately not surfaced or logged: it can
     // contain fragments of the workbook's contents.
-    throw new WorkbookReadError(
-      "Wayfare couldn't read that workbook",
-      'The file may be password-protected, corrupted, or saved in an older format. Try re-saving it as .xlsx.',
-    );
+    throw new WorkbookReadError('unreadable');
   }
 
   if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
-    throw new WorkbookReadError('That workbook has no sheets', 'Check that the file exported correctly and try again.');
+    throw new WorkbookReadError('noSheets');
   }
 
   return buildTrip(workbook, { name: file.name, size: file.size });
@@ -107,11 +99,7 @@ export function buildTrip(workbook: WorkBook, file: { name: string; size: number
     const grid = readGrid(workbook, name);
     if (!grid || grid.rows.length === 0 || grid.rows.every(isRowBlank)) {
       detections.push({ name, role: 'unknown', confidence: 'high', rowCount: 0, mappedColumns: [], unmappedColumns: [] });
-      issues.add({
-        kind: 'empty-sheet',
-        title: `"${name}" is empty`,
-        detail: 'This sheet has no data, so it was skipped.',
-      });
+      issues.add({ kind: 'empty-sheet', message: { id: 'emptySheet', sheet: name } });
       return null;
     }
 
@@ -221,20 +209,14 @@ export function buildTrip(workbook: WorkBook, file: { name: string; size: number
         });
         issues.add({
           kind: 'unmapped-sheet',
-          title: `"${sheet.grid.name}" was not recognized`,
-          detail: `Wayfare could not tell what this sheet contains (best guess: ${describeGuess(sheet.headers)}). Nothing from it appears in your trip.`,
+          message: { id: 'unmappedSheet', sheet: sheet.grid.name, guess: describeGuess(sheet.headers) },
         });
       }
     }
   }
 
   if (!sawItinerary) {
-    issues.add({
-      kind: 'missing-field',
-      title: 'No itinerary sheet found',
-      detail: 'Wayfare could not identify a sheet with day-by-day activities. Everything else that was recognized has still been imported.',
-      severity: 'critical',
-    });
+    issues.add({ kind: 'missing-field', message: { id: 'noItinerarySheet' }, severity: 'critical' });
   }
 
   // Travelers discovered late (from the last itinerary rows) still belong to every
@@ -262,8 +244,13 @@ export function buildTrip(workbook: WorkBook, file: { name: string; size: number
   if (unconvertible.length > 0) {
     issues.add({
       kind: 'invalid-currency',
-      title: `${unconvertible.length} cost${unconvertible.length === 1 ? '' : 's'} left out of the totals`,
-      detail: `No exchange rate was given for ${uniqueValues(unconvertible.map((e) => e.base?.currency ?? e.fallback?.currency)).join(', ')} → ${totalsCurrency}, so these amounts are shown on their own items but not added to any total: ${unconvertible.map((e) => e.label).slice(0, 6).join(', ')}.`,
+      message: {
+        id: 'unconvertibleCosts',
+        count: unconvertible.length,
+        currencies: uniqueValues(unconvertible.map((e) => e.base?.currency ?? e.fallback?.currency)).join(', '),
+        target: totalsCurrency,
+        labels: unconvertible.map((e) => e.label).slice(0, 6).join(', '),
+      },
     });
   }
 
@@ -272,6 +259,7 @@ export function buildTrip(workbook: WorkBook, file: { name: string; size: number
 
   const trip: Trip = {
     id: stableId('trip', [file.name, facts.title ?? '', startDate ?? '']),
+    // Falls back to the file name, which is the author's own words either way.
     title: facts.title ?? deriveTitle(file.name),
     destinations: facts.destinations.length > 0 ? facts.destinations : deriveDestinations(days),
     startDate,
@@ -305,8 +293,7 @@ function reportUnmapped(issues: IssueCollector, sheet: string, unmapped: readonl
   if (unmapped.length === 0) return;
   issues.add({
     kind: 'unrecognized-column',
-    title: `${unmapped.length} column${unmapped.length === 1 ? '' : 's'} not matched in "${sheet}"`,
-    detail: `Wayfare did not recognize: ${unmapped.join(', ')}. These columns are not shown anywhere in your trip.`,
+    message: { id: 'unmappedColumns', count: unmapped.length, sheet, columns: unmapped.join(', ') },
   });
 }
 
@@ -417,7 +404,7 @@ export function deriveBudget(items: readonly ItineraryItem[]): BudgetEntry[] {
       const entry: BudgetEntry = {
         id: stableId('budget', [item.id]),
         label: item.activity,
-        category: CATEGORY_BY_TYPE[item.type],
+        categoryKey: CATEGORY_BY_TYPE[item.type],
         scope: item.scope,
         itineraryItemId: item.id,
         isFlight: item.type === 'flight',

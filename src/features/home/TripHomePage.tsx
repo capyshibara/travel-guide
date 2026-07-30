@@ -22,21 +22,16 @@ import {
   findNowNext,
   actionableIssueCount,
 } from '../../domain/selectors';
-import {
-  formatDateRange,
-  formatDayLabel,
-  formatMinutes,
-  formatMoney,
-  formatDelta,
-  pluralize,
-  todayIso,
-} from '../../lib/format';
-import { scopeInitials, scopeLabel, scopeSlot } from '../../import/travelers';
+import { formatDateRange, formatDayLabel, formatMinutes, formatMoney, formatDelta, todayIso } from '../../lib/format';
+import { scopeInitials, scopeLabel, scopeSlot, travelerName } from '../../import/travelers';
+import { useT } from '../../i18n/useT';
+import type { Messages } from '../../i18n/en';
 import type { Trip } from '../../domain/types';
 
 export function TripHomePage() {
   const { result, overrides, preferences } = useTripContext();
   const navigate = useNavigate();
+  const t = useT();
   const trip = result?.trip;
 
   // A single `now` for the whole render, so the hero and the schedule agree.
@@ -61,9 +56,9 @@ export function TripHomePage() {
       <TripSummaryCard
         title={trip.title}
         subtitle={[
-          trip.destinations.slice(0, 4).join(' → ') || 'Destinations not given',
+          trip.destinations.slice(0, 4).join(' → ') || t.home.destinationsMissing,
           formatDateRange(trip.startDate, trip.endDate),
-          trip.dayCount > 0 ? pluralize(trip.dayCount, 'day') : null,
+          trip.dayCount > 0 ? t.common.days(trip.dayCount) : null,
         ]
           .filter(Boolean)
           .join(' · ')}
@@ -72,35 +67,40 @@ export function TripHomePage() {
             key={traveler.id}
             slot={traveler.slot}
             initials={traveler.initials}
-            label={`${traveler.name}${traveler.departureCity ? `, departing from ${traveler.departureCity}` : ''}`}
+            label={`${travelerName(traveler, t.traveler)}${
+              traveler.departureCity ? `, ${t.traveler.departingFrom(traveler.departureCity)}` : ''
+            }`}
           />
         ))}
-        {...(countdown !== null ? { countdown: `Departs in ${pluralize(countdown, 'day')}` } : {})}
+        {...(countdown !== null ? { countdown: t.home.departsIn(countdown) } : {})}
         {...(highlight
           ? {
               upNext: {
-                label: currentItem ? 'Happening now' : 'Next up',
+                label: currentItem ? t.home.happeningNow : t.home.nextUp,
                 value: `${highlight.start === null ? '' : `${formatMinutes(highlight.start)} · `}${highlight.activity}`,
               },
             }
           : {})}
         stats={[
-          { label: `${scenario === 'base' ? 'Base' : 'Fallback'} budget`, value: formatMoney(scenario === 'base' ? groupBase : groupFallback, { compact: true }) },
-          { label: 'vs. fallback', value: formatDelta(groupBase, groupFallback) },
-          { label: 'Bookings', value: progress.label },
+          {
+            label: scenario === 'base' ? t.home.baseBudget : t.home.fallbackBudget,
+            value: formatMoney(scenario === 'base' ? groupBase : groupFallback, { compact: true }),
+          },
+          { label: t.home.vsFallback, value: formatDelta(groupBase, groupFallback) },
+          { label: t.home.bookingsStat, value: progress.label },
         ]}
       />
 
       {highlight ? (
         <Button size="lg" fullWidth onClick={() => navigate(`/activity/${encodeURIComponent(highlight.id)}`)}>
-          {currentItem ? 'Open what’s on now' : 'Open what’s next'}
+          {currentItem ? t.home.openNow : t.home.openNext}
         </Button>
       ) : null}
 
       {issueCount > 0 ? (
         <DataWarningBanner
           count={issueCount}
-          message={`${pluralize(issueCount, 'thing')} in your workbook ${issueCount === 1 ? 'needs' : 'need'} a look.`}
+          message={t.home.issuesBanner(issueCount)}
           onReview={() => navigate('/issues')}
         />
       ) : null}
@@ -118,16 +118,16 @@ export function TripHomePage() {
         <section className={shell.stack}>
           <div className={shell.rowBetween}>
             <h2 className={shell.sectionTitle}>
-              {today ? 'Today' : 'Next day'} · {formatDayLabel(upcoming.date)}
+              {today ? t.home.today : t.home.nextDay} · {formatDayLabel(upcoming.date)}
             </h2>
             <Button variant="ghost" size="sm" onClick={() => navigate(`/itinerary/${encodeURIComponent(upcoming.id)}`)}>
-              Full day
+              {t.home.fullDay}
             </Button>
           </div>
           <Card flush>
             {upcoming.items.length === 0 ? (
               <p className={shell.muted} style={{ padding: 'var(--space-4)' }}>
-                Nothing scheduled for this day.
+                {t.home.nothingScheduled}
               </p>
             ) : (
               <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
@@ -169,11 +169,11 @@ export function TripHomePage() {
                       <span style={{ flex: 1, fontSize: 'var(--fs-body-sm)', fontWeight: 'var(--fw-semibold)' }}>
                         {item.activity}
                       </span>
-                      {item.id === currentItem?.id ? <Badge tone="primary">Now</Badge> : null}
+                      {item.id === currentItem?.id ? <Badge tone="primary">{t.home.now}</Badge> : null}
                       <TravelerAvatar
                         slot={scopeSlot(item.scope, trip.travelers)}
                         initials={scopeInitials(item.scope, trip.travelers)}
-                        label={scopeLabel(item.scope, trip.travelers)}
+                        label={scopeLabel(item.scope, trip.travelers, t.traveler)}
                         size={24}
                       />
                     </button>
@@ -184,7 +184,7 @@ export function TripHomePage() {
           </Card>
           {upcoming.items.length > 0 ? (
             <p className={shell.muted}>
-              {pluralize(upcoming.items.length, 'activity', 'activities')}
+              {t.common.activities(upcoming.items.length)}
               {dayCost(upcoming, scenario, trip) ? ` · ${formatMoney(dayCost(upcoming, scenario, trip))}` : ''}
             </p>
           ) : null}
@@ -193,19 +193,23 @@ export function TripHomePage() {
 
       <section className={shell.grid2}>
         <SummaryTile
-          label="Itinerary"
-          value={itineraryLabel(trip, now)}
+          label={t.nav.itinerary}
+          value={itineraryLabel(t, trip, now)}
           onClick={() => navigate(defaultDayId(trip, now) ? `/itinerary/${encodeURIComponent(defaultDayId(trip, now)!)}` : '/itinerary')}
         />
         <SummaryTile
-          label="Budget"
+          label={t.nav.budget}
           value={formatMoney(scenario === 'base' ? groupBase : groupFallback, { compact: true })}
           onClick={() => navigate('/budget')}
         />
-        <SummaryTile label="Bookings" value={`${progress.label} done`} onClick={() => navigate('/bookings')} />
         <SummaryTile
-          label="Sources"
-          value={pluralize(trip.sources.length, 'linked fact')}
+          label={t.home.bookingsStat}
+          value={t.home.doneSuffix(progress.label)}
+          onClick={() => navigate('/bookings')}
+        />
+        <SummaryTile
+          label={t.sheetRole.sources}
+          value={t.home.linkedFacts(trip.sources.length)}
           onClick={() => navigate('/sources')}
         />
       </section>
@@ -224,10 +228,10 @@ function SummaryTile({ label, value, onClick }: { label: string; value: string; 
   );
 }
 
-function itineraryLabel(trip: Trip, now: Date): string {
+function itineraryLabel(t: Messages, trip: Trip, now: Date): string {
   const today = todayIso(now);
   const index = trip.days.findIndex((day) => day.date === today);
   const total = trip.days.filter((day) => day.date !== null).length;
-  if (index >= 0 && total > 0) return `Day ${index + 1} of ${total}`;
-  return pluralize(total, 'day');
+  if (index >= 0 && total > 0) return t.home.dayOfTotal(index + 1, total);
+  return t.common.days(total);
 }

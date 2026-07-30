@@ -12,11 +12,14 @@ import shell from '../../app/AppShell.module.css';
 import { useNavigate } from '../../app/router';
 import { useTripContext } from '../../state/TripContext';
 import { buildBudgetView } from '../../domain/selectors';
-import { formatDelta, formatMoney, pluralize } from '../../lib/format';
+import { travelerName } from '../../import/travelers';
+import { currentLocale, formatDelta, formatMoney } from '../../lib/format';
+import { useT } from '../../i18n/useT';
 
 export function BudgetPage() {
   const { result, preferences, setPreferences } = useTripContext();
   const navigate = useNavigate();
+  const t = useT();
   const trip = result?.trip;
 
   if (!trip) return null;
@@ -29,76 +32,84 @@ export function BudgetPage() {
     return (
       <EmptyState
         icon="wallet"
-        title="No costs found"
-        description="Your workbook did not have any amounts Wayfare could read, so there is nothing to total up."
-        action={<Button onClick={() => navigate('/issues')}>See what was missed</Button>}
+        title={t.budget.emptyTitle}
+        description={t.budget.emptyBody}
+        action={<Button onClick={() => navigate('/issues')}>{t.budget.seeWhatMissed}</Button>}
       />
     );
   }
 
   const groupTotal = scenario === 'base' ? trip.totals.group.base : trip.totals.group.fallback;
+  const scenarioWord = scenario === 'base' ? t.scenario.baseLower : t.scenario.fallbackLower;
 
   return (
     <div className={shell.stackLoose}>
       <div className={shell.rowBetween}>
-        <h1 className={shell.pageTitle}>Budget</h1>
+        <h1 className={shell.pageTitle}>{t.budget.title}</h1>
         <ScenarioToggle value={scenario} onChange={(value) => setPreferences({ scenario: value })} />
       </div>
 
       <div className={shell.grid2}>
         <BudgetSummaryCard
-          label="Group total"
+          label={t.budget.groupTotal}
           amount={formatMoney(groupTotal)}
-          sub={`${pluralize(trip.travelers.length, 'traveler')} · ${scenario} scenario`}
+          sub={t.budget.groupSub(trip.travelers.length, scenarioWord)}
           tone={scenario === 'fallback' ? 'warning' : 'default'}
         />
         <BudgetSummaryCard
-          label="Base vs. fallback"
-          amount={formatDelta(trip.totals.group.base, trip.totals.group.fallback)}
-          sub="Difference across the whole trip"
+          label={t.budget.baseVsFallback}
+          amount={formatDelta(trip.totals.group.base, trip.totals.group.fallback, t.budget.noDifference)}
+          sub={t.budget.differenceAcrossTrip}
         />
       </div>
 
       {trip.travelers.length > 0 ? (
-        <Card eyebrow="Per traveler">
+        <Card eyebrow={t.budget.perTraveler}>
           {trip.travelers.map((traveler) => {
             const totals = trip.totals.perTraveler[traveler.id];
             const amount = scenario === 'base' ? totals?.base : totals?.fallback;
             return (
               <div key={traveler.id} className={shell.definitionRow}>
                 <p className={shell.definitionLabel} style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-                  <TravelerAvatar slot={traveler.slot} initials={traveler.initials} label={traveler.name} size={24} decorative />
-                  {traveler.name}
-                  {traveler.departureCity ? ` · from ${traveler.departureCity}` : ''}
+                  <TravelerAvatar
+                    slot={traveler.slot}
+                    initials={traveler.initials}
+                    label={travelerName(traveler, t.traveler)}
+                    size={24}
+                    decorative
+                  />
+                  {travelerName(traveler, t.traveler)}
+                  {traveler.departureCity ? ` · ${t.traveler.from(traveler.departureCity)}` : ''}
                 </p>
                 <p className={shell.definitionValue}>{formatMoney(amount)}</p>
               </div>
             );
           })}
           <p className={shell.muted} style={{ marginTop: 'var(--space-3)' }}>
-            Each traveler's own costs in full, plus an equal share of anything marked shared. Activities with no traveler
-            assigned are excluded.
+            {t.budget.perTravelerNote}
           </p>
         </Card>
       ) : null}
 
-      <Card eyebrow="Flights vs. shared trip costs">
+      <Card eyebrow={t.budget.flightsVsShared}>
         <div className={shell.definitionRow}>
-          <p className={shell.definitionLabel}>Flights</p>
+          <p className={shell.definitionLabel}>{t.budget.flights}</p>
           <p className={shell.definitionValue}>{formatMoney(view.flights)}</p>
         </div>
         <div className={shell.definitionRow}>
-          <p className={shell.definitionLabel}>Shared trip costs</p>
+          <p className={shell.definitionLabel}>{t.budget.sharedCosts}</p>
           <p className={shell.definitionValue}>{formatMoney(view.shared)}</p>
         </div>
       </Card>
 
       {view.categories.length > 0 ? (
-        <Card eyebrow="By category">
+        <Card eyebrow={t.budget.byCategory}>
           <CategoryBreakdown
-            label={`Spending by category, ${scenario} scenario`}
+            label={t.budget.byCategoryLabel(scenarioWord)}
             categories={view.categories.map((category) => ({
-              ...category,
+              // The workbook's own category wording wins; only our inferred buckets translate.
+              label: category.label ?? t.category[category.categoryKey ?? 'other'],
+              value: category.value,
               display: formatMoney({ amount: category.value, currency }),
             }))}
           />
@@ -106,7 +117,7 @@ export function BudgetPage() {
       ) : null}
 
       {view.individual.some((entry) => entry.entries.length > 0) ? (
-        <Card eyebrow="Traveler-specific expenses">
+        <Card eyebrow={t.budget.travelerSpecific}>
           {view.individual.map((entry) =>
             entry.entries.map((budgetEntry) => {
               const amount = scenario === 'base' ? budgetEntry.base : (budgetEntry.fallback ?? budgetEntry.base);
@@ -116,7 +127,7 @@ export function BudgetPage() {
                     <TravelerAvatar
                       slot={entry.traveler.slot}
                       initials={entry.traveler.initials}
-                      label={entry.traveler.name}
+                      label={travelerName(entry.traveler, t.traveler)}
                       size={22}
                       decorative
                     />
@@ -141,7 +152,7 @@ export function BudgetPage() {
       ) : null}
 
       {trip.totals.stated.length > 0 ? (
-        <Card eyebrow="Stated in your workbook">
+        <Card eyebrow={t.budget.statedTitle}>
           {trip.totals.stated.map((stated) => (
             <div key={stated.label} className={shell.definitionRow}>
               <p className={shell.definitionLabel}>{stated.label}</p>
@@ -151,23 +162,21 @@ export function BudgetPage() {
             </div>
           ))}
           <p className={shell.muted} style={{ marginTop: 'var(--space-3)' }}>
-            These are the figures written in your Overview sheet, shown exactly as given. Wayfare's own totals above are
-            summed from the itinerary and will differ if the workbook's figures include anything not itemised.
+            {t.budget.statedNote}
           </p>
         </Card>
       ) : null}
 
       {trip.exchangeRates.length > 0 ? (
-        <AssumptionCallout kind="assumption" label="Exchange rate">
+        <AssumptionCallout kind="assumption" label={t.budget.exchangeRateLabel}>
           {trip.exchangeRates
-            .map((rate) => `1 ${rate.from} = ${rate.rate.toLocaleString()} ${rate.to}`)
+            .map((rate) => `1 ${rate.from} = ${rate.rate.toLocaleString(currentLocale())} ${rate.to}`)
             .join(' · ')}
-          . Taken from your workbook and applied to every converted amount. Actual rates will differ.
+          . {t.budget.exchangeRateNote}
         </AssumptionCallout>
       ) : (
-        <AssumptionCallout kind="recheck" label="No exchange rate">
-          Your workbook did not give an exchange rate, so amounts in other currencies are shown as written and are not
-          added into the totals.
+        <AssumptionCallout kind="recheck" label={t.budget.noExchangeRateLabel}>
+          {t.budget.noExchangeRateNote}
         </AssumptionCallout>
       )}
     </div>

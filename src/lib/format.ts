@@ -6,14 +6,36 @@
  * itinerary render as July 2nd for anyone west of Greenwich.
  */
 import type { IsoDate, Money } from '../domain/types';
-import { formatDuration, formatMinutes } from '../import/coerce';
+import { formatMinutes } from '../import/coerce';
+import { CATALOGUES, getLanguage, getLocale } from '../i18n/locale';
 
-export { formatDuration, formatMinutes };
+export { formatMinutes };
 
-/** The viewer's locale, falling back to en-GB for its unambiguous date order. */
+/**
+ * Minutes as "6h 35m" in the active language.
+ *
+ * The parsing layer has its own units-free duration helper; this is the display one,
+ * so a Vietnamese reader gets "6 giờ 35 phút" rather than English abbreviations.
+ */
+export function formatDuration(minutes: number): string {
+  if (!Number.isFinite(minutes) || minutes <= 0) return '';
+  const t = CATALOGUES[getLanguage()].common;
+  const h = Math.floor(minutes / 60);
+  const m = Math.round(minutes % 60);
+  if (h === 0) return t.minutes(m);
+  if (m === 0) return t.hours(h);
+  return `${t.hours(h)} ${t.minutes(m)}`;
+}
+
+/**
+ * The locale the Intl formatters use — the app's chosen language, not the browser's.
+ *
+ * Picking the app language keeps dates and amounts consistent with the surrounding
+ * copy: a reader who chose Vietnamese sees Vietnamese month names and 15.500 grouping,
+ * whatever their browser is set to.
+ */
 export function currentLocale(): string {
-  if (typeof navigator === 'undefined') return 'en-GB';
-  return navigator.language || 'en-GB';
+  return getLocale();
 }
 
 function parseIso(date: IsoDate): Date | null {
@@ -25,7 +47,8 @@ function parseIso(date: IsoDate): Date | null {
 const dateFormatterCache = new Map<string, Intl.DateTimeFormat>();
 
 function dateFormatter(options: Intl.DateTimeFormatOptions): Intl.DateTimeFormat {
-  const key = JSON.stringify(options);
+  // Keyed by locale as well as options, so switching language rebuilds the formatter.
+  const key = `${currentLocale()}|${JSON.stringify(options)}`;
   const cached = dateFormatterCache.get(key);
   if (cached) return cached;
   const formatter = new Intl.DateTimeFormat(currentLocale(), { ...options, timeZone: 'UTC' });
@@ -33,17 +56,17 @@ function dateFormatter(options: Intl.DateTimeFormatOptions): Intl.DateTimeFormat
   return formatter;
 }
 
-/** "Mon, 6 Jul" */
-export function formatDayLabel(date: IsoDate | null): string {
-  if (!date) return 'No date';
+/** "Mon, 6 Jul". `noDate` is supplied by the caller so this file holds no copy. */
+export function formatDayLabel(date: IsoDate | null, noDate = '—'): string {
+  if (!date) return noDate;
   const parsed = parseIso(date);
   if (!parsed) return date;
   return dateFormatter({ weekday: 'short', day: 'numeric', month: 'short' }).format(parsed);
 }
 
 /** "Monday, 6 July 2026" — used for accessible labels and page headings. */
-export function formatFullDate(date: IsoDate | null): string {
-  if (!date) return 'No date';
+export function formatFullDate(date: IsoDate | null, noDate = '—'): string {
+  if (!date) return noDate;
   const parsed = parseIso(date);
   if (!parsed) return date;
   return dateFormatter({ weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(parsed);
@@ -66,10 +89,10 @@ export function formatDayOfMonth(date: IsoDate | null): string {
 }
 
 /** "3–15 Jul 2026", or a single date when both ends match. */
-export function formatDateRange(start: IsoDate | null, end: IsoDate | null): string {
-  if (!start && !end) return 'Dates not given';
-  if (!start) return formatDayLabel(end);
-  if (!end || start === end) return formatFullDate(start);
+export function formatDateRange(start: IsoDate | null, end: IsoDate | null, noDates = '—'): string {
+  if (!start && !end) return noDates;
+  if (!start) return formatDayLabel(end, noDates);
+  if (!end || start === end) return formatFullDate(start, noDates);
   const from = parseIso(start);
   const to = parseIso(end);
   if (!from || !to) return `${start} – ${end}`;
@@ -142,26 +165,13 @@ export function formatConverted(money: Money | null | undefined): string | null 
   return `≈ ${formatMoney(money)}`;
 }
 
-/** "+$420" / "−$30" / "No difference" */
-export function formatDelta(base: Money | null, fallback: Money | null): string {
+/** "+$420" / "−$30", or `noDifference` when the two scenarios match. */
+export function formatDelta(base: Money | null, fallback: Money | null, noDifference = '—'): string {
   if (!base || !fallback || base.currency !== fallback.currency) return '—';
   const difference = fallback.amount - base.amount;
-  if (difference === 0) return 'No difference';
+  if (difference === 0) return noDifference;
   const sign = difference > 0 ? '+' : '−';
   return `${sign}${formatMoney({ amount: Math.abs(difference), currency: base.currency })}`;
-}
-
-/** "07:30 – 12:00" with an overnight marker handled by the caller. */
-export function formatTimeRange(start: number | null, end: number | null): string {
-  if (start === null && end === null) return 'Time not given';
-  if (start === null) return `until ${formatMinutes(end!)}`;
-  if (end === null) return formatMinutes(start);
-  return `${formatMinutes(start)}–${formatMinutes(end)}`;
-}
-
-/** Whole number of items, pluralised. */
-export function pluralize(count: number, singular: string, plural = `${singular}s`): string {
-  return `${count} ${count === 1 ? singular : plural}`;
 }
 
 /** Bytes as "1.2 MB", for the import summary. */

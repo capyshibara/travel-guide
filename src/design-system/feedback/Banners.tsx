@@ -2,6 +2,8 @@ import type { ReactNode } from 'react';
 import styles from './feedback.module.css';
 import { cx } from '../../lib/cx';
 import { Icon } from '../Icon';
+import { useT } from '../../i18n/useT';
+
 
 export interface DataWarningBannerProps {
   message: string;
@@ -11,7 +13,9 @@ export interface DataWarningBannerProps {
 }
 
 /** Inline warning for import ambiguity, shown above the content it affects. */
-export function DataWarningBanner({ message, count, onReview, reviewLabel = 'Review' }: DataWarningBannerProps) {
+export function DataWarningBanner({ message, count, onReview, reviewLabel }: DataWarningBannerProps) {
+  const t = useT();
+  const label = reviewLabel ?? t.common.review;
   return (
     <div className={styles.warningBanner} role="status">
       <span className={styles.warningIcon}>
@@ -20,7 +24,7 @@ export function DataWarningBanner({ message, count, onReview, reviewLabel = 'Rev
       <span className={styles.warningText}>{message}</span>
       {onReview ? (
         <button type="button" className={styles.warningAction} onClick={onReview}>
-          {count === undefined ? reviewLabel : `${reviewLabel} (${count})`}
+          {count === undefined ? label : `${label} (${count})`}
         </button>
       ) : null}
     </div>
@@ -28,12 +32,6 @@ export function DataWarningBanner({ message, count, onReview, reviewLabel = 'Rev
 }
 
 export type AssumptionKind = 'assumption' | 'recheck' | 'verified';
-
-const KIND_LABEL: Record<AssumptionKind, string> = {
-  assumption: 'Assumption',
-  recheck: 'Recheck',
-  verified: 'Verified',
-};
 
 const KIND_BORDER: Record<AssumptionKind, string | undefined> = {
   assumption: styles.calloutAssumption,
@@ -59,10 +57,11 @@ export interface AssumptionCalloutProps {
  * The tag text carries the meaning; the colour only reinforces it.
  */
 export function AssumptionCallout({ kind = 'assumption', children, label }: AssumptionCalloutProps) {
+  const t = useT();
   return (
     <div className={cx(styles.callout, KIND_BORDER[kind])}>
       <div>
-        <span className={cx(styles.calloutTag, KIND_TAG[kind])}>{label ?? KIND_LABEL[kind]}</span>
+        <span className={cx(styles.calloutTag, KIND_TAG[kind])}>{label ?? t.assumption[kind]}</span>
         <div>{children}</div>
       </div>
     </div>
@@ -74,10 +73,11 @@ export interface OfflineIndicatorProps {
 }
 
 export function OfflineIndicator({ stale }: OfflineIndicatorProps) {
+  const t = useT();
   return (
     <span className={styles.offline}>
       <span className={styles.offlineDot} aria-hidden="true" />
-      {stale ? 'Offline · showing last saved data' : 'Offline'}
+      {stale ? t.offline.stale : t.offline.offline}
     </span>
   );
 }

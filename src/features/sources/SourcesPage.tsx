@@ -12,14 +12,10 @@ import shell from '../../app/AppShell.module.css';
 import { useNavigate } from '../../app/router';
 import { useTripContext } from '../../state/TripContext';
 import { findItem } from '../../domain/selectors';
-import { formatDayLabel, pluralize } from '../../lib/format';
+import { formatDayLabel } from '../../lib/format';
+import { useT } from '../../i18n/useT';
+import type { Messages } from '../../i18n/en';
 import type { Source } from '../../domain/types';
-
-const KIND_LABEL: Record<Source['kind'], string> = {
-  verified: 'Verified',
-  assumption: 'Assumption',
-  recheck: 'Needs recheck',
-};
 
 const KIND_TONE: Record<Source['kind'], 'success' | 'info' | 'warning'> = {
   verified: 'success',
@@ -30,6 +26,7 @@ const KIND_TONE: Record<Source['kind'], 'success' | 'info' | 'warning'> = {
 export function SourcesPage() {
   const { result } = useTripContext();
   const navigate = useNavigate();
+  const t = useT();
   const [query, setQuery] = useState('');
   const [kind, setKind] = useState('all');
 
@@ -57,18 +54,15 @@ export function SourcesPage() {
   return (
     <div className={shell.stackLoose}>
       <div>
-        <h1 className={shell.pageTitle}>Sources &amp; assumptions</h1>
-        <p className={shell.muted}>
-          What the plan is based on, and how sure each part is. Anything without a working link is treated as an
-          assumption, never as fact.
-        </p>
+        <h1 className={shell.pageTitle}>{t.sources.title}</h1>
+        <p className={shell.muted}>{t.sources.intro}</p>
       </div>
 
       {trip.assumptions.length > 0 ? (
         <section className={shell.stack}>
-          <h2 className={shell.sectionTitle}>From your Overview sheet</h2>
+          <h2 className={shell.sectionTitle}>{t.sources.fromOverview}</h2>
           {trip.assumptions.map((assumption) => (
-            <AssumptionCallout key={assumption.id} kind={assumption.kind} label={assumption.label}>
+            <AssumptionCallout key={assumption.id} kind={assumption.kind} label={t.assumption[assumption.labelKey]}>
               {assumption.detail}
             </AssumptionCallout>
           ))}
@@ -78,32 +72,32 @@ export function SourcesPage() {
       {!hasSources ? (
         <EmptyState
           icon="book-open"
-          title="No sources found"
-          description="Your workbook did not have a sources sheet Wayfare could read, so there is nothing to check the plan against."
-          action={<Button onClick={() => navigate('/import')}>See detected sheets</Button>}
+          title={t.sources.emptyTitle}
+          description={t.sources.emptyBody}
+          action={<Button onClick={() => navigate('/import')}>{t.sources.seeDetectedSheets}</Button>}
         />
       ) : (
         <>
           <SearchFilterSort
             query={query}
             onQuery={setQuery}
-            label="Search sources"
-            placeholder="Search topics and facts"
+            label={t.sources.searchLabel}
+            placeholder={t.sources.searchPlaceholder}
             activeFilter={kind}
             onFilter={setKind}
-            filterLabel="Filter by confidence"
+            filterLabel={t.sources.filterByConfidence}
             filters={[
-              { value: 'all', label: 'All', suffix: String(trip.sources.length) },
-              { value: 'verified', label: 'Verified', suffix: String(counts.verified) },
-              { value: 'assumption', label: 'Assumption', suffix: String(counts.assumption) },
-              { value: 'recheck', label: 'Recheck', suffix: String(counts.recheck) },
+              { value: 'all', label: t.sources.filterAll, suffix: String(trip.sources.length) },
+              { value: 'verified', label: t.sources.kindVerified, suffix: String(counts.verified) },
+              { value: 'assumption', label: t.sources.kindAssumption, suffix: String(counts.assumption) },
+              { value: 'recheck', label: t.sources.filterRecheck, suffix: String(counts.recheck) },
             ]}
           />
 
           {visible.length === 0 ? (
             <EmptyState
-              title="No sources match"
-              description="Try a different search term or filter."
+              title={t.sources.noneMatch}
+              description={t.sources.noneMatchBody}
               action={
                 <Button
                   variant="secondary"
@@ -112,7 +106,7 @@ export function SourcesPage() {
                     setKind('all');
                   }}
                 >
-                  Clear filters
+                  {t.common.clearFilters}
                 </Button>
               }
             />
@@ -121,13 +115,13 @@ export function SourcesPage() {
               {visible.map((source) => (
                 <SourceCard
                   key={source.id}
-                  topic={source.topic}
+                  topic={source.topic || t.sources.untitledTopic}
                   fact={source.fact}
                   {...(source.url ? { url: source.url } : {})}
-                  {...(source.notes ? { notes: source.notes } : {})}
+                  {...(sourceNotes(source, t.sources.linkAsWritten) ? { notes: sourceNotes(source, t.sources.linkAsWritten)! } : {})}
                   tags={
                     <span style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
-                      <Badge tone={KIND_TONE[source.kind]}>{KIND_LABEL[source.kind]}</Badge>
+                      <Badge tone={KIND_TONE[source.kind]}>{kindLabel(t, source.kind)}</Badge>
                       {source.relatedItemIds.slice(0, 2).map((itemId) => {
                         const related = findItem(trip, itemId);
                         if (!related) return null;
@@ -152,25 +146,36 @@ export function SourcesPage() {
             </section>
           )}
 
-          <Card eyebrow="How these are classified">
+          <Card eyebrow={t.sources.howClassifiedTitle}>
             <ul className={shell.muted} style={{ margin: 0, paddingLeft: 'var(--space-5)' }}>
               <li>
-                <b>Verified</b> — the row has a working link to check the fact against.
+                <b>{t.sources.kindVerified}</b> — {t.sources.howVerified}
               </li>
               <li>
-                <b>Assumption</b> — no link, or wording like “assumed” or “around”.
+                <b>{t.sources.kindAssumption}</b> — {t.sources.howAssumption}
               </li>
               <li>
-                <b>Needs recheck</b> — the link does not work, or the row itself flags the fact as unconfirmed.
+                <b>{t.sources.kindRecheck}</b> — {t.sources.howRecheck}
               </li>
             </ul>
             <p className={shell.muted} style={{ marginTop: 'var(--space-3)' }}>
-              {pluralize(counts.recheck, 'source')} still need{counts.recheck === 1 ? 's' : ''} a recheck before you
-              rely on {counts.recheck === 1 ? 'it' : 'them'}.
+              {t.sources.recheckCount(counts.recheck)}
             </p>
           </Card>
         </>
       )}
     </div>
   );
+}
+
+function kindLabel(t: Messages, kind: Source['kind']): string {
+  if (kind === 'verified') return t.sources.kindVerified;
+  if (kind === 'assumption') return t.sources.kindAssumption;
+  return t.sources.kindRecheck;
+}
+
+/** The row's own notes, plus the link text when the URL turned out not to work. */
+function sourceNotes(source: Source, linkAsWritten: (value: string) => string): string | null {
+  const parts = [source.notes, source.brokenUrlText ? linkAsWritten(source.brokenUrlText) : null].filter(Boolean);
+  return parts.length > 0 ? parts.join(' · ') : null;
 }

@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { buildTrip } from '../buildTrip';
-import type { ImportResult, ItineraryItem } from '../../domain/types';
+import { en } from '../../i18n/en';
+import { renderIssue } from '../../i18n/renderIssue';
+import type { ImportIssue, ImportResult, ItineraryItem } from '../../domain/types';
 import {
   ITINERARY_HEADER,
   OVERVIEW_ROWS,
@@ -13,6 +15,12 @@ import {
 } from './fixtures';
 
 const FILE = { name: 'trip.xlsx', size: 1024 };
+
+/** Issues carry codes, not prose; these tests assert on the English rendering of them. */
+function issueText(issue: ImportIssue): string {
+  const { title, detail } = renderIssue(en, issue.message);
+  return `${title} ${detail}`;
+}
 
 function importSheets(sheets: Record<string, CellInput[][]>, merges?: Record<string, string[]>): ImportResult {
   return buildTrip(makeWorkbook(sheets, merges), FILE);
@@ -74,7 +82,7 @@ describe('sheet role detection', () => {
       Itinerary: [ITINERARY_HEADER, row({})],
       Scratch: [['aaa', 'bbb'], ['1', '2']],
     });
-    expect(result.issues.some((i) => i.kind === 'unmapped-sheet' && i.title.includes('Scratch'))).toBe(true);
+    expect(result.issues.some((i) => i.kind === 'unmapped-sheet' && issueText(i).includes('Scratch'))).toBe(true);
   });
 
   it('flags a workbook with no itinerary as a partial import', () => {
@@ -333,7 +341,7 @@ describe('costs and currency', () => {
       ],
     });
     expect(result.trip.totals.group.base?.amount).toBeCloseTo(100, 5);
-    expect(result.issues.some((i) => i.kind === 'invalid-currency' && i.detail.includes('SGD'))).toBe(true);
+    expect(result.issues.some((i) => i.kind === 'invalid-currency' && issueText(i).includes('SGD'))).toBe(true);
   });
 
   it('keeps stated overview figures under their own labels rather than as our sums', () => {
@@ -422,7 +430,7 @@ describe('partial and missing data', () => {
       Itinerary: [[...ITINERARY_HEADER, 'Vibe check'], [...row({ 8: 'Kept' }), 'ok']],
     });
     expect(itemNamed(result, 'Kept')).toBeDefined();
-    const issue = result.issues.find((i) => i.kind === 'unrecognized-column' && i.detail.includes('Vibe check'));
+    const issue = result.issues.find((i) => i.kind === 'unrecognized-column' && issueText(i).includes('Vibe check'));
     expect(issue).toBeDefined();
   });
 
@@ -470,7 +478,7 @@ describe('bookings', () => {
       Itinerary: [ITINERARY_HEADER, row({})],
       'Booking Options': [['Item', 'Booking timing'], ['Flight', 'Booked']],
     });
-    expect(result.issues.some((i) => i.detail.includes('Booked'))).toBe(false);
+    expect(result.issues.some((i) => issueText(i).includes('Booked'))).toBe(false);
   });
 
   it('reads the five booking statuses', () => {
@@ -516,7 +524,8 @@ describe('sources', () => {
     const source = result.trip.sources[0];
     expect(source?.kind).toBe('recheck');
     expect(source?.url).toBeUndefined();
-    expect(source?.notes).toContain('https//example.com/x');
+    // The unusable link is preserved separately so the page can show it as written.
+    expect(source?.brokenUrlText).toBe('https//example.com/x');
   });
 
   it('links a source to the activity that cites the same URL', () => {

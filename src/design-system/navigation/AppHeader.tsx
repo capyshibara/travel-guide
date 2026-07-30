@@ -2,6 +2,8 @@ import type { ReactNode } from 'react';
 import styles from './navigation.module.css';
 import { IconButton } from '../core/IconButton';
 import { Icon } from '../Icon';
+import { useT } from '../../i18n/useT';
+
 
 export interface AppHeaderProps {
   title: string;
@@ -11,11 +13,12 @@ export interface AppHeaderProps {
   right?: ReactNode;
 }
 
-export function AppHeader({ title, subtitle, onBack, backLabel = 'Back', right }: AppHeaderProps) {
+export function AppHeader({ title, subtitle, onBack, backLabel, right }: AppHeaderProps) {
+  const t = useT();
   return (
     <header className={styles.header}>
       {onBack ? (
-        <IconButton icon={<Icon name="chevron-left" size="md" />} label={backLabel} onClick={onBack} />
+        <IconButton icon={<Icon name="chevron-left" size="md" />} label={backLabel ?? t.common.back} onClick={onBack} />
       ) : null}
       {/*
         Deliberately not a heading. This bar is persistent chrome that labels where you

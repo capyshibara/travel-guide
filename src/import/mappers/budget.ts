@@ -32,11 +32,7 @@ export function mapBudgetSheet(
 ): BudgetMapResult {
   const headerRow = findHeaderRow(grid, 2);
   if (headerRow === null) {
-    issues.add({
-      kind: 'missing-field',
-      title: `No column headers found in "${grid.name}"`,
-      detail: 'This sheet looked like a budget but no header row could be identified, so nothing was imported from it.',
-    });
+    issues.add({ kind: 'missing-field', message: { id: 'noHeaders', sheet: grid.name, role: 'budget' } });
     return { entries: [], mapped: [], unmapped: [] };
   }
 
@@ -65,15 +61,17 @@ export function mapBudgetSheet(
     const fallback = readMoney(cell('fallback'), rowCurrency);
     if (!base.ok && !fallback.ok) continue;
 
-    const category = readText(cell('category')) || 'Other';
+    const category = readText(cell('category'));
     const entry: BudgetEntry = {
       id: stableId('budget', [grid.name, label, excelRow]),
       label,
-      category,
       scope: registry.resolve(readText(cell('traveler'))),
       isFlight: FLIGHT_WORDS.test(`${label} ${category}`),
       origin,
     };
+    // The workbook's own category wording when it gave one; otherwise our own bucket.
+    if (category) entry.category = category;
+    else entry.categoryKey = 'other';
     if (base.ok) entry.base = base.value;
     if (fallback.ok) entry.fallback = fallback.value;
     entries.push(entry);

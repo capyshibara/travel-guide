@@ -3,6 +3,7 @@ import { cx } from '../../lib/cx';
 import { Icon } from '../Icon';
 import { Link } from '../../app/router';
 import { PRIMARY_NAV } from './navItems';
+import { useT } from '../../i18n/useT';
 
 export interface BottomNavProps {
   activeKey: string;
@@ -11,8 +12,9 @@ export interface BottomNavProps {
 }
 
 export function BottomNav({ activeKey, moreBadge }: BottomNavProps) {
+  const t = useT();
   return (
-    <nav className={styles.bottomNav} aria-label="Primary">
+    <nav className={styles.bottomNav} aria-label={t.nav.primary}>
       {PRIMARY_NAV.map((item) => {
         const active = item.key === activeKey;
         return (
@@ -23,11 +25,11 @@ export function BottomNav({ activeKey, moreBadge }: BottomNavProps) {
               aria-current={active ? 'page' : undefined}
             >
               <Icon name={item.icon} size="md" />
-              {item.label}
+              {t.nav[item.labelKey]}
             </Link>
             {item.key === 'more' && moreBadge ? (
               <span className={styles.bottomNavDot}>
-                <span className="visually-hidden">Unresolved data issues</span>
+                <span className="visually-hidden">{t.nav.unresolvedIssues}</span>
               </span>
             ) : null}
           </span>

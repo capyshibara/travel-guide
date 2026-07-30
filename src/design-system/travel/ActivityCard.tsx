@@ -5,6 +5,7 @@ import { Icon } from '../Icon';
 import { ActivityTypeBadge } from './ActivityTypeBadge';
 import type { TravelerSlot } from './TravelerAvatar';
 import type { ActivityType } from '../../domain/types';
+import { useT } from '../../i18n/useT';
 
 const SLOT_BORDER: Record<TravelerSlot, string | undefined> = {
   a: styles.travelerA,
@@ -56,6 +57,7 @@ export function ActivityCard({
   warning,
   onOpen,
 }: ActivityCardProps) {
+  const t = useT();
   return (
     <button
       type="button"
@@ -66,7 +68,7 @@ export function ActivityCard({
       {emphasis ? (
         <span className={cx(styles.nowFlag, emphasis === 'next' && styles.nextFlag)}>
           <Icon name={emphasis === 'now' ? 'clock' : 'calendar-clock'} size="xs" />
-          {emphasis === 'now' ? 'Happening now' : 'Next up'}
+          {emphasis === 'now' ? t.home.happeningNow : t.home.nextUp}
         </span>
       ) : null}
 
@@ -75,7 +77,7 @@ export function ActivityCard({
         <span style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
           {bookingRequired ? (
             <span className={styles.activityBookingIcon}>
-              <Icon name="ticket" size="xs" title="Booking needed" />
+              <Icon name="ticket" size="xs" title={t.itinerary.bookingNeeded} />
             </span>
           ) : null}
           {traveler}

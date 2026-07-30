@@ -28,11 +28,7 @@ export function mapBookingSheet(
 ): BookingMapResult {
   const headerRow = findHeaderRow(grid, 2);
   if (headerRow === null) {
-    issues.add({
-      kind: 'missing-field',
-      title: `No column headers found in "${grid.name}"`,
-      detail: 'This sheet looked like a booking list but no header row could be identified, so nothing was imported from it.',
-    });
+    issues.add({ kind: 'missing-field', message: { id: 'noHeaders', sheet: grid.name, role: 'bookings' } });
     return { items: [], mapped: [], unmapped: [] };
   }
 
@@ -63,8 +59,7 @@ export function mapBookingSheet(
     if (timingText && !urgency.matched) {
       issues.add({
         kind: 'unrecognized-column',
-        title: 'Booking timing not recognized',
-        detail: `"${timingText}" in ${grid.name} row ${excelRow} did not match a known booking window, so "${itemText}" is grouped under "No action required". The original wording is shown on the item.`,
+        message: { id: 'unknownBookingTiming', value: timingText, sheet: grid.name, row: excelRow, item: itemText },
         origin,
       });
     }
@@ -74,8 +69,7 @@ export function mapBookingSheet(
     if (statusText && !status.matched) {
       issues.add({
         kind: 'unrecognized-column',
-        title: 'Booking status not recognized',
-        detail: `"${statusText}" in ${grid.name} row ${excelRow} did not match a known status, so "${itemText}" starts as Not started.`,
+        message: { id: 'unknownBookingStatus', value: statusText, sheet: grid.name, row: excelRow, item: itemText },
         origin,
       });
     }
@@ -85,8 +79,7 @@ export function mapBookingSheet(
     if (!url && urlCell && looksLikeBrokenUrl(readText(urlCell))) {
       issues.add({
         kind: 'broken-url',
-        title: 'Booking link is not usable',
-        detail: `"${readText(urlCell)}" in ${grid.name} row ${excelRow} looks like a link but could not be opened.`,
+        message: { id: 'brokenUrlBooking', value: readText(urlCell), sheet: grid.name, row: excelRow },
         origin,
       });
     }

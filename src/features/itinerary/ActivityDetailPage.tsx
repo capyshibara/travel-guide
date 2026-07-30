@@ -23,6 +23,7 @@ import { effectiveBookingStatus, findItem, flatItems } from '../../domain/select
 import { formatFullDate, formatMoney } from '../../lib/format';
 import { scopeInitials, scopeLabel, scopeSlot } from '../../import/travelers';
 import { canShare, canWriteClipboard, shareText, writeClipboard } from '../../lib/share';
+import { useT } from '../../i18n/useT';
 
 export interface ActivityDetailPageProps {
   itemId: string;
@@ -35,6 +36,7 @@ export function ActivityDetailPage({ itemId, embedded, onNavigateItem }: Activit
   const { result, overrides, toggleItemComplete } = useTripContext();
   const navigate = useNavigate();
   const toast = useToast();
+  const t = useT();
   const [showAllDetails, setShowAllDetails] = useState(false);
 
   const trip = result?.trip;
@@ -47,9 +49,9 @@ export function ActivityDetailPage({ itemId, embedded, onNavigateItem }: Activit
     return (
       <EmptyState
         icon="map"
-        title="Activity not found"
-        description="It may have come from a workbook that has since been replaced."
-        action={<Button onClick={() => navigate('/itinerary')}>Back to itinerary</Button>}
+        title={t.activity.notFound}
+        description={t.activity.notFoundBody}
+        action={<Button onClick={() => navigate('/itinerary')}>{t.activity.backToItinerary}</Button>}
       />
     );
   }
@@ -87,21 +89,18 @@ export function ActivityDetailPage({ itemId, embedded, onNavigateItem }: Activit
               beside the itinerary's own h1, so it steps down a level. */}
           <Title className={styles.detailTitle}>{item.activity}</Title>
           <p className={styles.detailMeta}>
-            {day.date ? formatFullDate(day.date) : 'No date given'} · {scopeLabel(item.scope, trip.travelers)}
+            {formatFullDate(day.date, t.itinerary.noDate)} · {scopeLabel(item.scope, trip.travelers, t.traveler)}
           </p>
         </div>
         <TravelerAvatar
           slot={scopeSlot(item.scope, trip.travelers)}
           initials={scopeInitials(item.scope, trip.travelers)}
-          label={scopeLabel(item.scope, trip.travelers)}
+          label={scopeLabel(item.scope, trip.travelers, t.traveler)}
         />
       </header>
 
       {item.scope.kind === 'unassigned' ? (
-        <AssumptionCallout kind="recheck">
-          Your workbook did not say which traveler this is for, so it is shown for everyone and left out of per-traveler
-          totals.
-        </AssumptionCallout>
+        <AssumptionCallout kind="recheck">{t.activity.unassignedWarning}</AssumptionCallout>
       ) : null}
 
       <Card>
@@ -114,11 +113,11 @@ export function ActivityDetailPage({ itemId, embedded, onNavigateItem }: Activit
             durationMinutes={item.durationMinutes}
             crossesMidnight={item.crossesMidnight}
           />
-          <ActivityTypeBadge type={item.type} label={item.typeLabel} />
+          <ActivityTypeBadge type={item.type} label={item.typeLabel ?? t.activityType[item.type]} />
         </div>
         {item.durationDerived && item.durationMinutes ? (
           <p className={shell.muted} style={{ marginTop: 'var(--space-2)' }}>
-            Duration calculated from the start and end times.
+            {t.activity.durationDerived}
           </p>
         ) : null}
         {routeLabel(item.routeFrom, item.routeTo, item.place) ? (
@@ -138,17 +137,17 @@ export function ActivityDetailPage({ itemId, embedded, onNavigateItem }: Activit
       </Card>
 
       {item.notes ? (
-        <Card eyebrow="Good to know">
+        <Card eyebrow={t.activity.goodToKnow}>
           <p style={{ lineHeight: 'var(--lh-normal)' }}>{item.notes}</p>
         </Card>
       ) : null}
 
       {item.practical.length > 0 ? (
-        <Card eyebrow="Practical needs">
+        <Card eyebrow={t.activity.practicalNeeds}>
           <dl className={styles.practicalList}>
             {item.practical.map((entry) => (
-              <div key={entry.label} className={styles.practicalRow}>
-                <dt className={styles.practicalLabel}>{entry.label}</dt>
+              <div key={entry.field} className={styles.practicalRow}>
+                <dt className={styles.practicalLabel}>{t.practical[entry.field]}</dt>
                 <dd className={styles.practicalValue}>{entry.value}</dd>
               </div>
             ))}
@@ -157,7 +156,7 @@ export function ActivityDetailPage({ itemId, embedded, onNavigateItem }: Activit
       ) : null}
 
       {item.bookingAction || booking ? (
-        <Card eyebrow="Booking">
+        <Card eyebrow={t.activity.booking}>
           {item.bookingAction ? <p>{item.bookingAction}</p> : null}
           {booking ? (
             <div className={shell.stack} style={{ marginTop: 'var(--space-3)' }}>
@@ -166,7 +165,7 @@ export function ActivityDetailPage({ itemId, embedded, onNavigateItem }: Activit
                 <BookingStatusChip status={effectiveBookingStatus(booking, overrides)} />
               </div>
               <Button variant="secondary" size="sm" onClick={() => navigate('/bookings')}>
-                Open in booking checklist
+                {t.activity.openInBookings}
               </Button>
             </div>
           ) : null}
@@ -174,10 +173,10 @@ export function ActivityDetailPage({ itemId, embedded, onNavigateItem }: Activit
       ) : null}
 
       {item.baseCost || item.fallbackCost ? (
-        <Card eyebrow="Cost">
+        <Card eyebrow={t.activity.cost}>
           <div className={styles.costPair}>
             <div>
-              <p className={styles.costLabel}>Base</p>
+              <p className={styles.costLabel}>{t.scenario.base}</p>
               <CostDisplay
                 amount={item.baseCost}
                 converted={item.convertedBase}
@@ -187,7 +186,7 @@ export function ActivityDetailPage({ itemId, embedded, onNavigateItem }: Activit
               />
             </div>
             <div>
-              <p className={styles.costLabel}>Fallback</p>
+              <p className={styles.costLabel}>{t.scenario.fallback}</p>
               <CostDisplay
                 amount={item.fallbackCost}
                 converted={item.convertedFallback}
@@ -199,7 +198,7 @@ export function ActivityDetailPage({ itemId, embedded, onNavigateItem }: Activit
           </div>
           {item.scope.kind === 'shared' && item.scope.travelerIds.length > 1 ? (
             <p className={shell.muted} style={{ marginTop: 'var(--space-3)' }}>
-              Shared cost — split {item.scope.travelerIds.length} ways in per-traveler totals.
+              {t.activity.sharedCost(item.scope.travelerIds.length)}
             </p>
           ) : null}
         </Card>
@@ -207,13 +206,11 @@ export function ActivityDetailPage({ itemId, embedded, onNavigateItem }: Activit
 
       {/* Progressive disclosure: the source of a row is useful, but not up front. */}
       {showAllDetails ? (
-        <Card eyebrow="Where this came from">
-          <p className={shell.muted}>
-            {item.origin.sheet}, row {item.origin.row}
-          </p>
+        <Card eyebrow={t.activity.whereFrom}>
+          <p className={shell.muted}>{t.activity.fromSheetRow(item.origin.sheet, item.origin.row)}</p>
           {item.rawType ? (
             <p className={shell.muted} style={{ marginTop: 'var(--space-2)' }}>
-              Segment type in your workbook: “{item.rawType}” — not a type Wayfare recognizes, so a generic icon is used.
+              {t.activity.rawTypeNote(item.rawType)}
             </p>
           ) : null}
           {sources.length > 0 ? (
@@ -229,11 +226,11 @@ export function ActivityDetailPage({ itemId, embedded, onNavigateItem }: Activit
         </Card>
       ) : (
         <Button variant="ghost" onClick={() => setShowAllDetails(true)}>
-          Show where this came from
+          {t.activity.showWhereFrom}
         </Button>
       )}
 
-      {item.sourceUrl ? <ExternalLinkButton href={item.sourceUrl} label="Open source link" /> : null}
+      {item.sourceUrl ? <ExternalLinkButton href={item.sourceUrl} label={t.activity.openSourceLink} /> : null}
 
       <div className={styles.detailActions}>
         <Button
@@ -241,10 +238,10 @@ export function ActivityDetailPage({ itemId, embedded, onNavigateItem }: Activit
           icon={<Icon name={completed ? 'check-circle-2' : 'check'} size="sm" />}
           onClick={() => {
             toggleItemComplete(item.id);
-            toast(completed ? 'Marked as not done' : 'Marked as done', completed ? 'neutral' : 'success');
+            toast(completed ? t.activity.markedNotDone : t.activity.markedDone, completed ? 'neutral' : 'success');
           }}
         >
-          {completed ? 'Done' : 'Mark as done'}
+          {completed ? t.activity.done : t.activity.markDone}
         </Button>
 
         {/* Hidden rather than shown-and-broken where the browser has no such API. */}
@@ -254,7 +251,7 @@ export function ActivityDetailPage({ itemId, embedded, onNavigateItem }: Activit
             icon={<Icon name="share-2" size="sm" />}
             onClick={() => void shareText(item.activity, summaryText)}
           >
-            Share
+            {t.activity.share}
           </Button>
         ) : null}
         {canWriteClipboard() ? (
@@ -263,15 +260,15 @@ export function ActivityDetailPage({ itemId, embedded, onNavigateItem }: Activit
             icon={<Icon name="copy" size="sm" />}
             onClick={async () => {
               const ok = await writeClipboard(summaryText);
-              toast(ok ? 'Activity details copied' : "Couldn't copy — your browser blocked it", ok ? 'success' : 'warning');
+              toast(ok ? t.activity.copied : t.activity.copyFailed, ok ? 'success' : 'warning');
             }}
           >
-            Copy details
+            {t.activity.copyDetails}
           </Button>
         ) : null}
       </div>
 
-      <nav className={styles.prevNext} aria-label="Activity navigation">
+      <nav className={styles.prevNext} aria-label={t.activity.navLabel}>
         <Button
           variant="secondary"
           size="sm"
@@ -279,7 +276,7 @@ export function ActivityDetailPage({ itemId, embedded, onNavigateItem }: Activit
           icon={<Icon name="chevron-left" size="sm" />}
           onClick={() => previous && goTo(previous.id)}
         >
-          <span className={styles.prevNextLabel}>{previous ? previous.activity : 'Start of trip'}</span>
+          <span className={styles.prevNextLabel}>{previous ? previous.activity : t.activity.startOfTrip}</span>
         </Button>
         <Button
           variant="secondary"
@@ -287,26 +284,26 @@ export function ActivityDetailPage({ itemId, embedded, onNavigateItem }: Activit
           disabled={!next}
           onClick={() => next && goTo(next.id)}
         >
-          <span className={styles.prevNextLabel}>{next ? next.activity : 'End of trip'}</span>
+          <span className={styles.prevNextLabel}>{next ? next.activity : t.activity.endOfTrip}</span>
           <Icon name="chevron-right" size="sm" />
         </Button>
       </nav>
 
       {!embedded ? (
         <Button variant="ghost" onClick={() => navigate(`/itinerary/${encodeURIComponent(day.id)}`)}>
-          Back to {day.date ? formatFullDate(day.date) : 'the itinerary'}
+          {t.activity.backToDay(formatFullDate(day.date, t.nav.itinerary))}
         </Button>
       ) : null}
 
       {completed ? (
         <Badge tone="success">
           <Icon name="check" size="xs" />
-          Marked done on this device
+          {t.activity.doneOnDevice}
         </Badge>
       ) : null}
 
       <p className={shell.muted}>
-        {formatMoney(item.baseCost) === '—' ? 'No cost recorded for this activity.' : null}
+        {formatMoney(item.baseCost) === '—' ? t.activity.noCost : null}
       </p>
     </div>
   );

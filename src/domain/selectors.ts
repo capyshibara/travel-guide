@@ -17,6 +17,7 @@ import type {
   ItineraryItem,
   Money,
   Traveler,
+  DerivedCategory,
   Trip,
   TravelerScope,
 } from './types';
@@ -25,13 +26,14 @@ import { convert } from './money';
 import { daysBetween, todayIso } from '../lib/format';
 import { MINUTES_PER_DAY } from '../import/coerce';
 
-export const URGENCY_GROUPS: readonly { key: BookingUrgency; label: string; tone: 'danger' | 'default' }[] = [
-  { key: 'now', label: 'Book now', tone: 'danger' },
-  { key: '7-14', label: 'Book 7–14 days before', tone: 'default' },
-  { key: '1-3', label: 'Book 1–3 days before', tone: 'default' },
-  { key: 'arrival', label: 'Arrange on arrival', tone: 'default' },
-  { key: 'site', label: 'Pay on site', tone: 'default' },
-  { key: 'none', label: 'No action required', tone: 'default' },
+/** Urgency bands in the order the checklist shows them. Headings come from the catalogue. */
+export const URGENCY_GROUPS: readonly { key: BookingUrgency; tone: 'danger' | 'default' }[] = [
+  { key: 'now', tone: 'danger' },
+  { key: '7-14', tone: 'default' },
+  { key: '1-3', tone: 'default' },
+  { key: 'arrival', tone: 'default' },
+  { key: 'site', tone: 'default' },
+  { key: 'none', tone: 'default' },
 ];
 
 /** The traveler's own status if they set one, otherwise what the workbook said. */
@@ -177,12 +179,18 @@ export function dayProgressPercent(day: ItineraryDay, at: Date = new Date()): nu
   return Math.min(100, Math.max(0, ((minutes - first) / (last - first)) * 100));
 }
 
+/** What to say about a tight or clashing connection. Worded by the page, in its language. */
+export type ConnectionMessage =
+  | { id: 'overlaps'; title: string }
+  | { id: 'startsImmediatelyAfter'; title: string }
+  | { id: 'onlyMinutesAfter'; minutes: number; title: string };
+
 export interface Connection {
   itemId: string;
   /** Minutes of slack before this item starts. */
   gapMinutes: number;
   kind: 'tight' | 'overlap';
-  message: string;
+  message: ConnectionMessage;
 }
 
 const TIGHT_CONNECTION_MINUTES = 30;
@@ -222,14 +230,17 @@ export function findConnections(day: ItineraryDay, travelers: readonly Traveler[
           itemId: current.id,
           gapMinutes: gap,
           kind: 'overlap',
-          message: `Overlaps "${previous.activity}"`,
+          message: { id: 'overlaps', title: previous.activity },
         });
       } else if (gap <= TIGHT_CONNECTION_MINUTES && previous.type !== current.type) {
         connections.push({
           itemId: current.id,
           gapMinutes: gap,
           kind: 'tight',
-          message: gap === 0 ? `Starts the moment "${previous.activity}" ends` : `Only ${gap} min after "${previous.activity}"`,
+          message:
+            gap === 0
+              ? { id: 'startsImmediatelyAfter', title: previous.activity }
+              : { id: 'onlyMinutesAfter', minutes: gap, title: previous.activity },
         });
       }
     }
@@ -269,8 +280,17 @@ export function daysWithIssues(trip: Trip, issues: readonly ImportIssue[]): Set<
   return flagged;
 }
 
+export interface BudgetCategoryTotal {
+  /** The workbook's own category wording, kept verbatim. Null when we inferred the bucket. */
+  label: string | null;
+  /** Our own bucket, translated by the page. Only used when `label` is null. */
+  categoryKey: DerivedCategory | null;
+  value: number;
+  display: string;
+}
+
 export interface BudgetView {
-  categories: { label: string; value: number; display: string }[];
+  categories: BudgetCategoryTotal[];
   flights: Money | null;
   shared: Money | null;
   individual: { traveler: Traveler; entries: BudgetEntry[]; total: Money | null }[];
@@ -283,23 +303,31 @@ export function buildBudgetView(trip: Trip, scenario: CostScenario): BudgetView 
   const amountOf = (entry: BudgetEntry): Money | undefined =>
     scenario === 'base' ? entry.base : (entry.fallback ?? entry.base);
 
-  const byCategory = new Map<string, Money[]>();
+  // Grouped on the workbook's own wording where it gave one, so a Vietnamese workbook
+  // keeps its Vietnamese category names; rows without one fall back to our derived
+  // bucket, which the page translates. The `#` prefix cannot collide with a real cell.
+  const byCategory = new Map<string, { label: string | null; categoryKey: DerivedCategory | null; amounts: Money[] }>();
   for (const entry of trip.budget) {
     const money = amountOf(entry);
     if (!money) continue;
-    const bucket = byCategory.get(entry.category);
-    if (bucket) bucket.push(money);
-    else byCategory.set(entry.category, [money]);
+    const key = entry.category ?? `#${entry.categoryKey ?? 'other'}`;
+    const bucket = byCategory.get(key);
+    if (bucket) bucket.amounts.push(money);
+    else
+      byCategory.set(key, {
+        label: entry.category ?? null,
+        categoryKey: entry.category ? null : (entry.categoryKey ?? 'other'),
+        amounts: [money],
+      });
   }
 
-  const categories = [...byCategory.entries()]
-    .map(([label, amounts]) => {
-      const total = sumMoney(amounts, currency, trip.exchangeRates);
-      return { label, value: total?.amount ?? 0, money: total };
+  const categories = [...byCategory.values()]
+    .map((bucket) => {
+      const total = sumMoney(bucket.amounts, currency, trip.exchangeRates);
+      return { label: bucket.label, categoryKey: bucket.categoryKey, value: total?.amount ?? 0, money: total };
     })
     .filter((category) => category.money !== null)
-    .sort((a, b) => b.value - a.value)
-    .map((category) => ({ label: category.label, value: category.value, display: '', money: category.money }));
+    .sort((a, b) => b.value - a.value);
 
   const flightEntries = trip.budget.filter((entry) => entry.isFlight);
   const sharedEntries = trip.budget.filter((entry) => !entry.isFlight && entry.scope.kind === 'shared');
@@ -317,7 +345,12 @@ export function buildBudgetView(trip: Trip, scenario: CostScenario): BudgetView 
 
   return {
     // `display` is filled by the page, which owns money formatting.
-    categories: categories.map((category) => ({ label: category.label, value: category.value, display: '' })),
+    categories: categories.map((category) => ({
+      label: category.label,
+      categoryKey: category.categoryKey,
+      value: category.value,
+      display: '',
+    })),
     flights: sumMoney(flightEntries.map(amountOf), currency, trip.exchangeRates),
     shared: sumMoney(sharedEntries.map(amountOf), currency, trip.exchangeRates),
     individual,

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import styles from './AppShell.module.css';
 import { cx } from '../lib/cx';
 import {
@@ -29,6 +29,10 @@ import { DataIssuesPage } from '../features/issues/DataIssuesPage';
 import { MorePage } from '../features/more/MorePage';
 import { actionableIssueCount, defaultDayId, findDay, findItem } from '../domain/selectors';
 import { formatDayLabel } from '../lib/format';
+import { I18nProvider } from '../i18n/I18nContext';
+import { useT } from '../i18n/useT';
+import { setLanguage, type Language } from '../i18n/locale';
+import type { Messages } from '../i18n/en';
 import type { Trip } from '../domain/types';
 
 const ROUTES = [
@@ -47,13 +51,35 @@ const ROUTES = [
 export function App() {
   return (
     <TripProvider>
-      <ToastProvider>
-        <ErrorBoundary>
-          <Shell />
-        </ErrorBoundary>
-      </ToastProvider>
+      <Localized>
+        <ToastProvider>
+          <ErrorBoundary>
+            <Shell />
+          </ErrorBoundary>
+        </ToastProvider>
+      </Localized>
     </TripProvider>
   );
+}
+
+/**
+ * Publishes the language preference to both React and the Intl formatters.
+ *
+ * `setLanguage` is called during render rather than in an effect on purpose: the
+ * formatters in `lib/format` read the module-level value while this same tree renders,
+ * so deferring it to an effect would show one frame of dates in the previous locale.
+ * The call is an idempotent assignment, so re-running it under Strict Mode is harmless.
+ */
+function Localized({ children }: { children: ReactNode }) {
+  const { preferences } = useTripContext();
+  const language: Language = preferences.language;
+  setLanguage(language);
+
+  useEffect(() => {
+    document.documentElement.lang = language;
+  }, [language]);
+
+  return <I18nProvider language={language}>{children}</I18nProvider>;
 }
 
 function Shell() {
@@ -61,6 +87,7 @@ function Shell() {
   const route = useRoute(ROUTES);
   const navigate = useNavigate();
   const viewport = useViewport();
+  const t = useT();
   const online = useOnlineStatus();
   const mainRef = useRef<HTMLElement>(null);
   useRouteChangeFocus(mainRef);
@@ -93,13 +120,13 @@ function Shell() {
     if (fallback) navigate(`/itinerary/${encodeURIComponent(fallback)}`, { replace: true });
   }, [trip, route.pattern, navigate]);
 
-  const header = useMemo(() => headerFor(route.pattern, route.params, trip), [route.pattern, route.params, trip]);
+  const header = useMemo(() => headerFor(t, route.pattern, route.params, trip), [t, route.pattern, route.params, trip]);
 
   const content = (() => {
     if (!hydrated) {
       return (
         <div className={styles.stack} aria-busy="true">
-          <SkeletonLoader height={120} radius="var(--radius-xl)" label="Loading your trip" />
+          <SkeletonLoader height={120} radius="var(--radius-xl)" label={t.loading} />
           <SkeletonLoader height={72} radius="var(--radius-lg)" />
           <SkeletonLoader height={72} radius="var(--radius-lg)" />
         </div>
@@ -119,7 +146,7 @@ function Shell() {
           <div className={cx(styles.split, styles.splitWide)}>
             <ItineraryPage dayId={dayId} selectedItemId={panedItemId} onSelectItem={setPanedItemId} />
             <div className={styles.stickyPane}>
-              <ErrorBoundary title="Couldn't show this activity">
+              <ErrorBoundary title={t.errors.activityBoundary}>
                 {panedItemId ? (
                   <ActivityDetailPage
                     itemId={panedItemId}
@@ -127,7 +154,7 @@ function Shell() {
                     onNavigateItem={(id) => setPanedItemId(id)}
                   />
                 ) : (
-                  <p className={styles.muted}>Select an activity to see its full details here.</p>
+                  <p className={styles.muted}>{t.itinerary.selectActivity}</p>
                 )}
               </ErrorBoundary>
             </div>
@@ -154,7 +181,7 @@ function Shell() {
   return (
     <div className={styles.root}>
       <a className="skip-link" href="#main">
-        Skip to content
+        {t.app.skipToContent}
       </a>
 
       {isWide && trip ? (
@@ -164,7 +191,7 @@ function Shell() {
           issueCount={issueCount}
           footer={
             <Button variant="ghost" size="sm" onClick={() => navigate('/more')}>
-              Settings &amp; data
+              {t.nav.settingsAndData}
             </Button>
           }
         />
@@ -181,7 +208,7 @@ function Shell() {
               {trip && route.pattern !== '/import' ? (
                 <IconButton
                   icon={<Icon name="file-spreadsheet" size="sm" />}
-                  label="Import details"
+                  label={t.nav.importDetails}
                   onClick={() => navigate('/import')}
                 />
               ) : null}
@@ -207,12 +234,17 @@ interface HeaderSpec {
   backTo?: string | undefined;
 }
 
-function headerFor(pattern: string | null, params: Record<string, string>, trip: Trip | null): HeaderSpec {
-  if (!trip) return { title: 'Wayfare', subtitle: 'Your trip, day by day' };
+function headerFor(
+  t: Messages,
+  pattern: string | null,
+  params: Record<string, string>,
+  trip: Trip | null,
+): HeaderSpec {
+  if (!trip) return { title: t.app.name, subtitle: t.app.tagline };
 
   switch (pattern) {
     case '/import':
-      return { title: 'Import', subtitle: 'Read your workbook' };
+      return { title: t.header.import.title, subtitle: t.header.import.subtitle };
     case '/':
       return { title: trip.title, subtitle: trip.destinations.slice(0, 3).join(' → ') || undefined };
     case '/itinerary':
@@ -221,39 +253,40 @@ function headerFor(pattern: string | null, params: Record<string, string>, trip:
       const index = day ? trip.days.indexOf(day) + 1 : 0;
       const total = trip.days.filter((candidate) => candidate.date !== null).length;
       return {
-        title: 'Itinerary',
-        subtitle: day && index > 0 && total > 0 ? `Day ${index} of ${total}` : undefined,
+        title: t.header.itinerary,
+        subtitle: day && index > 0 && total > 0 ? t.header.dayOf(index, total) : undefined,
       };
     }
     case '/activity/:itemId': {
       const found = params.itemId ? findItem(trip, params.itemId) : null;
       return {
-        title: 'Activity',
+        title: t.header.activity,
         subtitle: found?.day.date ? formatDayLabel(found.day.date) : undefined,
         backTo: found ? `/itinerary/${encodeURIComponent(found.day.id)}` : '/itinerary',
       };
     }
     case '/budget':
-      return { title: 'Budget', subtitle: 'Base and fallback' };
+      return { title: t.header.budget.title, subtitle: t.header.budget.subtitle };
     case '/bookings':
-      return { title: 'Bookings', subtitle: 'What to book, and when' };
+      return { title: t.header.bookings.title, subtitle: t.header.bookings.subtitle };
     case '/sources':
-      return { title: 'Sources', subtitle: 'What the plan is based on', backTo: '/more' };
+      return { title: t.header.sources.title, subtitle: t.header.sources.subtitle, backTo: '/more' };
     case '/issues':
-      return { title: 'Data issues', subtitle: 'From your import', backTo: '/more' };
+      return { title: t.header.issues.title, subtitle: t.header.issues.subtitle, backTo: '/more' };
     case '/more':
-      return { title: 'More' };
+      return { title: t.header.more };
     default:
-      return { title: 'Wayfare' };
+      return { title: t.app.name };
   }
 }
 
 function NotFound() {
+  const t = useT();
   return (
     <div className={styles.stack}>
-      <h1 className={styles.pageTitle}>Page not found</h1>
-      <p className={styles.muted}>That link does not match anything in Wayfare.</p>
-      <Link to="/">Back to your trip</Link>
+      <h1 className={styles.pageTitle}>{t.notFound.title}</h1>
+      <p className={styles.muted}>{t.notFound.body}</p>
+      <Link to="/">{t.notFound.backToTrip}</Link>
     </div>
   );
 }

@@ -35,8 +35,13 @@ export class TravelerRegistry {
   /** Normalized alias -> traveler id. */
   private readonly aliases = new Map<string, string>();
 
-  /** Register a traveler the Overview sheet named explicitly. */
-  declare(name: string, departureCity?: string): Traveler | null {
+  /**
+   * Register a traveler the Overview sheet named explicitly.
+   *
+   * `generated` marks a placeholder we invented from a "Traveler A" style label rather
+   * than a real name, so the UI can render it in the reader's language.
+   */
+  declare(name: string, departureCity?: string, generated = false): Traveler | null {
     const cleaned = cleanText(name);
     if (!cleaned) return null;
     const existing = this.resolveOne(cleaned);
@@ -44,20 +49,26 @@ export class TravelerRegistry {
       if (departureCity && !existing.departureCity) existing.departureCity = departureCity;
       return existing;
     }
-    return this.create(cleaned, departureCity);
+    return this.create(cleaned, departureCity, generated);
   }
 
   /** Create N placeholder travelers when the workbook gives only a count. */
   ensureCount(count: number): void {
     for (let i = this.travelers.length; i < Math.min(count, SLOTS.length); i += 1) {
-      this.create(`Traveler ${SLOTS[i]!.toUpperCase()}`);
+      this.create(`Traveler ${SLOTS[i]!.toUpperCase()}`, undefined, true);
     }
   }
 
-  private create(name: string, departureCity?: string): Traveler {
+  private create(name: string, departureCity?: string, generated = false): Traveler {
     const slot = SLOTS[Math.min(this.travelers.length, SLOTS.length - 1)]!;
     const id = `traveler-${this.travelers.length + 1}`;
-    const traveler: Traveler = { id, name, initials: initialsFor(name, this.travelers.length), slot };
+    const traveler: Traveler = {
+      id,
+      name,
+      initials: initialsFor(name, this.travelers.length),
+      slot,
+      generatedName: generated,
+    };
     if (departureCity) traveler.departureCity = departureCity;
     this.travelers.push(traveler);
 
@@ -120,6 +131,7 @@ export class TravelerRegistry {
         if (!ids.includes(found.id)) ids.push(found.id);
       } else if (create && this.travelers.length < SLOTS.length && looksLikePersonToken(token)) {
         const made = this.create(token);
+        // A token from a traveler column is the author's own wording, not a placeholder.
         ids.push(made.id);
       }
     }
@@ -195,11 +207,35 @@ export function scopeSlot(
   return first?.slot ?? 'none';
 }
 
+/**
+ * The phrases a scope or traveler label needs, taken from the active catalogue.
+ *
+ * Passing them in keeps this module free of UI copy while still letting the labels it
+ * builds come out in the reader's language.
+ */
+export interface TravelerLabels {
+  unassigned: string;
+  both: string;
+  placeholder: (slot: string) => string;
+}
+
+/**
+ * What to call a traveler.
+ *
+ * A name the workbook actually wrote is shown verbatim, in whatever language it was
+ * written in. A placeholder we invented — because the workbook gave a head count, or a
+ * bare "A" — is ours to word, so it comes from the catalogue instead. The stored `name`
+ * stays put either way: the parser matches aliases against it.
+ */
+export function travelerName(traveler: Traveler, labels: TravelerLabels): string {
+  return traveler.generatedName ? labels.placeholder(traveler.slot) : traveler.name;
+}
+
 /** Human label for a scope, used in headings and screen-reader text. */
-export function scopeLabel(scope: TravelerScope, travelers: readonly Traveler[]): string {
-  if (scope.kind === 'unassigned') return 'Unassigned';
+export function scopeLabel(scope: TravelerScope, travelers: readonly Traveler[], labels: TravelerLabels): string {
+  if (scope.kind === 'unassigned') return labels.unassigned;
   const members = travelers.filter((t) => scope.travelerIds.includes(t.id));
-  if (members.length === 0) return 'Unassigned';
-  if (scope.kind === 'shared') return members.length > 1 ? 'Both travelers' : members[0]!.name;
-  return members.map((t) => t.name).join(' & ');
+  if (members.length === 0) return labels.unassigned;
+  if (scope.kind === 'shared') return members.length > 1 ? labels.both : travelerName(members[0]!, labels);
+  return members.map((t) => travelerName(t, labels)).join(' & ');
 }

@@ -1,6 +1,7 @@
 import styles from './travel.module.css';
 import { Icon } from '../Icon';
 import type { ActivityType } from '../../domain/types';
+import { useT } from '../../i18n/useT';
 
 export interface RouteDisplayProps {
   from: string;
@@ -10,12 +11,13 @@ export interface RouteDisplayProps {
 
 /** A single place, or a from → to route with a directional icon. */
 export function RouteDisplay({ from, to, type }: RouteDisplayProps) {
+  const t = useT();
   if (!to) return <div className={styles.route}>{from}</div>;
   return (
     <div className={styles.route}>
       <span>{from}</span>
       <span className={styles.routeIcon}>
-        <Icon name={type === 'flight' ? 'plane' : 'arrow-right'} size="xs" title="to" />
+        <Icon name={type === 'flight' ? 'plane' : 'arrow-right'} size="xs" title={t.common.routeTo} />
       </span>
       <span>{to}</span>
     </div>

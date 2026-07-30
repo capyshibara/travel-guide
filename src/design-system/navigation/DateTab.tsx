@@ -1,5 +1,6 @@
 import styles from './navigation.module.css';
 import { cx } from '../../lib/cx';
+import { useT } from '../../i18n/useT';
 
 export interface DateTabProps {
   /** Short weekday, e.g. "Mon". */
@@ -14,6 +15,7 @@ export interface DateTabProps {
 }
 
 export function DateTab({ day, date, label, active, hasWarning, onSelect }: DateTabProps) {
+  const t = useT();
   return (
     <button
       type="button"
@@ -27,7 +29,7 @@ export function DateTab({ day, date, label, active, hasWarning, onSelect }: Date
       <span className={styles.dateTabDate}>{date}</span>
       {hasWarning ? (
         <span className={styles.dateTabWarning}>
-          <span className="visually-hidden">Has data issues</span>
+          <span className="visually-hidden">{t.itinerary.hasIssues}</span>
         </span>
       ) : null}
     </button>
