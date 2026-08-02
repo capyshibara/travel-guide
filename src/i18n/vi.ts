@@ -572,6 +572,10 @@ export const vi: Messages = {
       title: 'Chưa gán người',
       detail: `"${p.title}" (${p.sheet} dòng ${p.row}) không ghi dành cho ai. Mục này hiện cho mọi người và không tính vào tổng của từng người.`,
     }),
+    noTravelerColumn: (p) => ({
+      title: `"${p.sheet}" không có cột người đi`,
+      detail: `${count(p.count, 'hoạt động')} trong trang tính này không ghi dành cho ai, vì trang tính không có cột đó — mọi hoạt động hiện cho tất cả mọi người và không tính vào tổng của từng người. Thêm cột "Người đi" nếu muốn chia chi phí theo từng người.`,
+    }),
     noActivitiesFound: (p) => ({
       title: `Không có hoạt động nào trong "${p.sheet}"`,
       detail: 'Trang tính được nhận diện là lịch trình nhưng mọi dòng dưới tiêu đề đều rỗng.',

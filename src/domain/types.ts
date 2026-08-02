@@ -254,6 +254,7 @@ export type IssueMessage =
   | { id: 'unknownSegmentType'; value: string; sheet: string; row: number }
   | { id: 'duplicateActivity'; sheet: string; row: number; title: string; firstRow: number }
   | { id: 'missingTraveler'; title: string; sheet: string; row: number }
+  | { id: 'noTravelerColumn'; sheet: string; count: number }
   | { id: 'noActivitiesFound'; sheet: string }
   | { id: 'unknownBookingTiming'; value: string; sheet: string; row: number; item: string }
   | { id: 'unknownBookingStatus'; value: string; sheet: string; row: number; item: string }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { matchAlias, normalizeKey, resolveHeaders } from '../normalize';
-import { ITINERARY_ALIASES, SHEET_ROLE_ALIASES } from '../aliases';
+import { matchAlias, normalizeKey, resolveHeaders, tokenize } from '../normalize';
+import { ITINERARY_ALIASES, OVERVIEW_ALIASES, SHEET_ROLE_ALIASES } from '../aliases';
 
 describe('normalizeKey', () => {
   it('folds case, whitespace and punctuation', () => {
@@ -42,6 +42,44 @@ describe('sheet-name matching', () => {
   it('returns null for a name it does not know', () => {
     expect(matchAlias('Sheet4', SHEET_ROLE_ALIASES)).toBeNull();
     expect(matchAlias('', SHEET_ROLE_ALIASES)).toBeNull();
+  });
+});
+
+describe('tokenize', () => {
+  it('splits on non-alphanumeric runs and folds case', () => {
+    expect(tokenize('Base VND / person')).toEqual(['base', 'vnd', 'person']);
+    expect(tokenize('TOTAL 4-leg flight/person (VND)')).toEqual(['total', '4', 'leg', 'flight', 'person', 'vnd']);
+  });
+});
+
+describe('matchAlias whole-word matching', () => {
+  // A real trip workbook once had this exact label matched to "endDate" — a short
+  // alias like "to" matched as a raw character prefix of "total", not as its own word.
+  it('does not let a short alias match inside a longer, unrelated word', () => {
+    expect(matchAlias('TOTAL 4-leg flight/person (VND)', OVERVIEW_ALIASES)).not.toBe('endDate');
+    expect(matchAlias('TOTAL incl. flight + visa', OVERVIEW_ALIASES)).toBe('groupTotal');
+  });
+
+  it('does not let an alias match as a substring buried inside another word', () => {
+    // "separate" contains the letters "rate"; a real workbook's "kept separate" budget
+    // note was once misread as an exchange-rate declaration because of it.
+    expect(matchAlias('Shopping budget kept separate', OVERVIEW_ALIASES, { anywhere: true })).not.toBe(
+      'exchangeRate',
+    );
+  });
+
+  it('still matches a short alias when it is genuinely its own word', () => {
+    expect(matchAlias('To', OVERVIEW_ALIASES)).toBe('endDate');
+    expect(matchAlias('End date: 21 Nov', OVERVIEW_ALIASES)).toBe('endDate');
+  });
+
+  it('with anywhere: false, only matches a field name that leads the text', () => {
+    // "Flight + Visa (fixed, from assumptions)" contains the standalone word "from",
+    // but it is not declaring a start date — the field name has to lead the label.
+    expect(
+      matchAlias('Flight + Visa (fixed, from assumptions)', OVERVIEW_ALIASES, { anywhere: false }),
+    ).toBeNull();
+    expect(matchAlias('From: 14 Nov 2026', OVERVIEW_ALIASES, { anywhere: false })).toBe('startDate');
   });
 });
 

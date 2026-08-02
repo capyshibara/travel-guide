@@ -78,8 +78,20 @@ export function mapOverviewSheet(
     const excelRow = grid.firstRowNumber + r;
     const origin: RowOrigin = { sheet: grid.name, row: excelRow };
 
-    // A row with a label but no value carries nothing; a row with no label is prose.
-    if (valueCells.length === 0) continue;
+    // A row with a label but no value carries nothing to read as a field — except a
+    // long lone sentence near the top of the sheet, a common way to write the trip's
+    // title across a whole merged row rather than as a "Title: ..." label/value pair.
+    // A later explicit title label (checked below) still wins over this guess.
+    if (valueCells.length === 0) {
+      if (label.length > 24) {
+        if (facts.title === undefined && excelRow <= grid.firstRowNumber + 2) {
+          facts.title = label;
+        } else {
+          facts.assumptions.push(makeAssumption(grid.name, excelRow, 'note', label));
+        }
+      }
+      continue;
+    }
 
     const valueText = valueCells.map((c) => readText(c)).join(' · ');
     const firstValue = valueCells[0]!;
@@ -91,14 +103,37 @@ export function mapOverviewSheet(
       continue;
     }
 
-    const field = matchAlias(label, OVERVIEW_ALIASES);
-    if (field === null) {
-      // Unlabelled prose in an overview sheet is usually a note worth surfacing.
-      if (label.length > 24 && valueCells.length === 0) {
-        facts.assumptions.push(makeAssumption(grid.name, excelRow, 'note', label));
-      } else {
-        facts.extras.push({ label, value: valueText });
+    // "KRW to VND", "USD to VND (ref)" — a different convention from an inline "1 USD
+    // = 15,500 IDR" sentence: the currency pair is the label itself, and the row's
+    // lone value is the rate. Checked before the general field dispatch, or the label
+    // would just be unrecognized prose (a bare "USD" matches no OVERVIEW_ALIASES field).
+    const currencyPair = /^([A-Za-z]{3})\s*(?:to|->|=>|→|:)\s*([A-Za-z]{3})\b/i.exec(label);
+    if (currencyPair) {
+      const from = parseCurrencyCode(currencyPair[1]);
+      const to = parseCurrencyCode(currencyPair[2]);
+      // Read the cell's own numeric value rather than its display text: a rate cell
+      // formatted to show no decimals would otherwise round 18.5 to "19" on the way in.
+      const rateOutcome = readMoney(firstValue, undefined);
+      const rate = rateOutcome.ok ? rateOutcome.value.amount : null;
+      if (from && to && from !== to && rate !== null && rate > 0) {
+        // Built from the parsed values, not quoted from the row: this row can share
+        // its columns with an unrelated table further along (a common side-by-side
+        // Overview layout), and `valueText` would otherwise carry that table's cells
+        // into what is meant to be a one-line note about this rate.
+        const note = `1 ${from} = ${rate} ${to}`;
+        facts.exchangeRates.push({ from, to, rate, note });
+        facts.assumptions.push(makeAssumption(grid.name, excelRow, 'exchangeRate', note));
+        continue;
       }
+    }
+
+    // Overview labels are free-text sentences ('Flight + Visa (fixed, from
+    // assumptions)'), not short column headers, so a field name is only trusted when
+    // it leads the label — matching one buried mid-sentence finds coincidences, which
+    // is how an unrelated budget row was once misread as a currency exchange rate.
+    const field = matchAlias(label, OVERVIEW_ALIASES, { anywhere: false });
+    if (field === null) {
+      facts.extras.push({ label, value: valueText });
       continue;
     }
 
@@ -116,6 +151,18 @@ export function mapOverviewSheet(
         kind: 'missing-field',
         message: { id: 'fewerTravelers', stated: facts.travelerCount, found: registry.list().length },
       });
+    }
+  }
+
+  // A budget figure with no currency of its own — a bare "19,452,256" cell, with
+  // nothing in its number format to say what it counts — is displayed without a unit
+  // otherwise. Backfilled now, after the whole sheet has been read, from the same
+  // inference `buildTrip` uses for the rest of the trip's costs.
+  const inferredCurrency = inferBaseCurrency(facts);
+  if (inferredCurrency) {
+    for (const field of ['baseBudget', 'fallbackBudget', 'perTravelerTotal', 'groupTotal'] as const) {
+      const money = facts[field];
+      if (money && !money.currency) facts[field] = { ...money, currency: inferredCurrency };
     }
   }
 
@@ -313,8 +360,14 @@ export function parseDateRange(text: string): { start: IsoDate; end: IsoDate } |
 export function inferBaseCurrency(facts: OverviewFacts): string | undefined {
   if (facts.baseCurrency) return facts.baseCurrency;
   if (facts.baseBudget?.currency) return facts.baseBudget.currency;
-  const first = facts.exchangeRates[0];
-  return first ? first.from : undefined;
+  // Exchange rates are conventionally written "foreign currency to home currency", so
+  // when every declared rate shares the same target, that shared target is almost
+  // certainly the trip's own working currency. Guessing the `from` side of whichever
+  // rate happened to be declared first picked "KRW" for a trip priced entirely in VND,
+  // just because "KRW to VND" was written above "USD to VND" in the sheet.
+  const targets = new Set(facts.exchangeRates.map((rate) => rate.to));
+  if (targets.size === 1) return facts.exchangeRates[0]?.to;
+  return undefined;
 }
 
 export function overviewLabelIsKnown(label: string): boolean {

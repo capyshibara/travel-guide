@@ -59,6 +59,12 @@ export function mapItinerarySheet(
   /** The last date we successfully read, so rows under a merged day header inherit it. */
   let carriedDate: string | null = null;
   const seenKeys = new Map<string, number>();
+  // No "Traveler" column at all is a structural, sheet-wide fact — common for a couple
+  // or group planning everything together — not a per-row oversight. One row-level
+  // warning per activity would flood the Data issues page with near-duplicates, so
+  // those rows are counted here and reported once after the loop instead.
+  const hasTravelerColumn = columns.traveler !== undefined;
+  let unassignedCount = 0;
 
   for (let r = headerRow + 1; r < grid.rows.length; r += 1) {
     const row = grid.rows[r];
@@ -229,12 +235,15 @@ export function mapItinerarySheet(
     const id = stableId('act', [sourceKey, excelRow]);
 
     if (scope.kind === 'unassigned') {
-      issues.add({
-        kind: 'missing-traveler',
-        message: { id: 'missingTraveler', title, sheet: grid.name, row: excelRow },
-        origin,
-        relatedItemId: id,
-      });
+      unassignedCount += 1;
+      if (hasTravelerColumn) {
+        issues.add({
+          kind: 'missing-traveler',
+          message: { id: 'missingTraveler', title, sheet: grid.name, row: excelRow },
+          origin,
+          relatedItemId: id,
+        });
+      }
     }
 
     const item: ItineraryItem = {
@@ -279,6 +288,14 @@ export function mapItinerarySheet(
 
   if (items.length === 0) {
     issues.add({ kind: 'empty-sheet', message: { id: 'noActivitiesFound', sheet: grid.name } });
+  }
+
+  if (!hasTravelerColumn && unassignedCount > 0) {
+    issues.add({
+      kind: 'missing-traveler',
+      message: { id: 'noTravelerColumn', sheet: grid.name, count: unassignedCount },
+      severity: 'info',
+    });
   }
 
   return { items, mapped, unmapped, headerRow };

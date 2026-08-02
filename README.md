@@ -112,11 +112,30 @@ Overview-only workbook produces a partial trip and tells you what is missing.
 The workbook's own language is preserved. Wayfare recognizes English, Indonesian and Vietnamese column headings, and
 never rewrites your text.
 
+Two Overview conventions beyond a plain "Field: value" row are recognized directly:
+
+- **A lone, sentence-length cell at the top of the sheet** (no separate label/value pair) is read as the trip title —
+  a common way to write a title across a whole merged row.
+- **`<currency> to <currency>`** rows (`KRW to VND`, `USD to VND (ref)`) are read as an exchange rate, with the rate
+  taken from the row's own value — a different convention from an inline `1 USD = 15,500 IDR` sentence, which is
+  matched separately.
+
+**A workbook with no traveler column at all** — common for a couple or group planning everything together — is not
+treated as 70 individual oversights. Every activity is shown for everyone and left out of per-traveler totals, exactly
+as when the column exists but a cell is blank, but it is reported once, as a single sheet-level note, rather than once
+per row.
+
 ## Recognized sheets and columns
 
 Matching is case-, space-, punctuation- and accent-insensitive: `Start Time`, `start_time` and `START-TIME` are the
 same column. When a sheet name is unhelpful, Wayfare falls back to recognising the sheet by its columns — the sample
 workbook's sources sheet is called `Sheet4` on purpose to demonstrate this.
+
+Matching is on whole words, not raw substrings: a column or label only matches an alias like `to` or `rate` when it
+appears as its own word, never as a fragment inside an unrelated one (`total` does not contain `to`; `separate` does
+not contain `rate`). An Overview sheet's free-text labels are matched only at the start of the label — a row that
+happens to *mention* "from" or "cities" partway through a longer sentence is left as an unrecognized note rather than
+guessed at, since Overview cells are commonly full sentences where a buried word is a coincidence, not a declaration.
 
 ### Sheet names
 

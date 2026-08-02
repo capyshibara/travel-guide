@@ -589,6 +589,10 @@ export const en = {
       title: 'No traveler assigned',
       detail: `"${p.title}" (${p.sheet} row ${p.row}) does not say which traveler it is for. It is shown for everyone and excluded from per-traveler totals.`,
     }),
+    noTravelerColumn: (p) => ({
+      title: `"${p.sheet}" has no traveler column`,
+      detail: `${plural(p.count, 'activity', 'activities')} in this sheet do not say which traveler they are for, because the sheet never has that column — every activity is shown for everyone and left out of per-traveler totals. Add a "Traveler" column if you want costs split per person.`,
+    }),
     noActivitiesFound: (p) => ({
       title: `No activities found in "${p.sheet}"`,
       detail: 'The sheet was detected as an itinerary but every row below the header was empty.',

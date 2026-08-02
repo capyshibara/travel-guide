@@ -34,31 +34,78 @@ export function isBlank(value: unknown): boolean {
 }
 
 /**
- * Resolve a header against an alias table.
+ * Split text into lowercase, accent-stripped word tokens.
+ *
+ *   "Base VND / person"  -> ["base", "vnd", "person"]
+ *   "TOTAL 4-leg flight"  -> ["total", "4", "leg", "flight"]
+ */
+export function tokenize(input: unknown): string[] {
+  if (input === null || input === undefined) return [];
+  const folded = String(input)
+    .normalize('NFKD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[đĐ]/g, 'd')
+    .toLowerCase();
+  return folded.split(/[^a-z0-9]+/).filter(Boolean);
+}
+
+/** Does `tokens` contain `needle` as a contiguous run, starting anywhere? */
+function containsTokenRun(tokens: readonly string[], needle: readonly string[]): boolean {
+  if (needle.length === 0 || needle.length > tokens.length) return false;
+  for (let start = 0; start <= tokens.length - needle.length; start += 1) {
+    if (needle.every((word, i) => tokens[start + i] === word)) return true;
+  }
+  return false;
+}
+
+export interface MatchAliasOptions {
+  /**
+   * Whether an alias may match anywhere in the text, not just as its leading words.
+   * Column headers are a handful of words where "anywhere" and "leading" are nearly
+   * the same thing; free-text label cells (an Overview sheet's "label: value" rows)
+   * are often full sentences, where matching a field name buried mid-sentence finds
+   * coincidences rather than the field the row actually declares. Default true.
+   */
+  anywhere?: boolean;
+}
+
+/**
+ * Resolve a header or label against an alias table.
  *
  * Matching runs in three passes, most precise first, so that a sheet with both
  * "Cost" and "Base cost" columns does not assign both to the same field:
- *   1. exact normalized equality
- *   2. header starts with an alias
- *   3. header contains an alias (only for aliases of 4+ characters, so short
- *      aliases like "to" or "ccy" cannot swallow unrelated headers)
+ *   1. exact normalized equality (handles concatenated forms like "EndDate")
+ *   2. the alias is a token-level prefix of the text ("End date: 12 Jul" matches "end date")
+ *   3. the alias appears as a whole word (token run) anywhere in the text
+ *
+ * All matching is on whole word tokens, never raw substrings — "to" cannot match
+ * inside "total", and "rate" cannot match inside "separate". An earlier version of
+ * this function matched substrings, and a real workbook's "TOTAL flight cost" row was
+ * consequently misread as an end date because it starts with "to".
  */
 export function matchAlias<F extends string>(
   header: string,
   aliases: Readonly<Record<F, readonly string[]>>,
+  options: MatchAliasOptions = {},
 ): F | null {
   const key = normalizeKey(header);
   if (!key) return null;
+  const { anywhere = true } = options;
   const entries = Object.entries(aliases) as [F, readonly string[]][];
+  const tokens = tokenize(header);
 
   for (const [field, list] of entries) {
     if (list.some((a) => normalizeKey(a) === key)) return field;
   }
   for (const [field, list] of entries) {
-    if (list.some((a) => key.startsWith(normalizeKey(a)))) return field;
+    if (list.some((a) => { const at = tokenize(a); return at.length > 0 && at.every((w, i) => tokens[i] === w); })) {
+      return field;
+    }
   }
-  for (const [field, list] of entries) {
-    if (list.some((a) => normalizeKey(a).length >= 4 && key.includes(normalizeKey(a)))) return field;
+  if (anywhere) {
+    for (const [field, list] of entries) {
+      if (list.some((a) => containsTokenRun(tokens, tokenize(a)))) return field;
+    }
   }
   return null;
 }

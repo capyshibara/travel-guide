@@ -499,6 +499,132 @@ describe('bookings', () => {
   });
 });
 
+describe('overview parsing on real-world sheet layouts', () => {
+  // A real Overview sheet had rows like "Trip year" (2026) and "TOTAL 4-leg flight/
+  // person (VND)" (8,681,000) sharing the sheet with a second, unrelated table further
+  // along the same rows. The trip title ended up as "2,026 · Base: actual booked
+  // stays..." — a splice of unrelated cells — because "Trip year" matched the generic
+  // "trip" alias for the title field.
+  it('does not let a generic word like "trip" claim an unrelated label as the title', () => {
+    const result = importSheets({
+      Overview: [
+        ['Trip year', 2026, null, 'Base: actual booked stays', 9751256],
+        ['Traveler count', 2],
+      ],
+      Itinerary: [ITINERARY_HEADER, row({})],
+    });
+    expect(result.trip.title).not.toContain('2,026');
+    expect(result.trip.title).not.toContain('9,751,256');
+  });
+
+  it('reads a lone long sentence at the top of the sheet as the trip title', () => {
+    const result = importSheets({
+      Overview: [
+        ['Seoul - Jeju - Busan (South Korea) | 8 days | 2 women | 14-21 Nov 2026'],
+        ['Traveler count', 2],
+      ],
+      Itinerary: [ITINERARY_HEADER, row({})],
+    });
+    expect(result.trip.title).toBe('Seoul - Jeju - Busan (South Korea) | 8 days | 2 women | 14-21 Nov 2026');
+  });
+
+  it('does not let "cities" buried in an unrelated sentence corrupt destinations', () => {
+    const result = importSheets({
+      Overview: [['Korea visa - shared across all 3 cities', 1020000]],
+      Itinerary: [ITINERARY_HEADER, row({})],
+    });
+    expect(result.trip.destinations).not.toEqual(['1', '020', '000']);
+  });
+
+  // "KRW to VND" / "USD to VND (ref)" states the currency pair as the label and the
+  // rate as the row's own value — a different convention from an inline "1 USD =
+  // 15,500 IDR" sentence, and one `parseExchangeRates` alone does not recognize.
+  it('reads a "<currency> to <currency>" label as an exchange rate', () => {
+    const result = importSheets({
+      Overview: [
+        ['KRW to VND', 18.5],
+        ['USD to VND (ref)', 26300],
+      ],
+      Itinerary: [ITINERARY_HEADER, row({})],
+    });
+    expect(result.trip.exchangeRates).toEqual(
+      expect.arrayContaining([
+        { from: 'KRW', to: 'VND', rate: 18.5, note: '1 KRW = 18.5 VND' },
+        { from: 'USD', to: 'VND', rate: 26300, note: '1 USD = 26300 VND' },
+      ]),
+    );
+  });
+
+  it("reads the rate cell's numeric value rather than its rounded display text", () => {
+    // Format "0" (no decimals) displays 18.5 as "19" — the parsed rate must come from
+    // the cell's own number, not the text Excel would render.
+    const result = importSheets({
+      Overview: [['KRW to VND', { v: 18.5, t: 'n', z: '0' }]],
+      Itinerary: [ITINERARY_HEADER, row({})],
+    });
+    const rate = result.trip.exchangeRates.find((r) => r.from === 'KRW');
+    expect(rate?.rate).toBe(18.5);
+  });
+
+  it('infers the trip currency from the shared target of its exchange rates, not the first one declared', () => {
+    const result = importSheets({
+      Overview: [
+        ['KRW to VND', 18.5],
+        ['USD to VND (ref)', 26300],
+      ],
+      Itinerary: [ITINERARY_HEADER, row({ 10: 'VND', 11: 100000, 12: 120000 })],
+    });
+    expect(result.trip.baseCurrency).toBe('VND');
+  });
+
+  it('backfills a stated total with the inferred currency when its own cell has none', () => {
+    const result = importSheets({
+      Overview: [
+        ['KRW to VND', 18.5],
+        ['USD to VND (ref)', 26300],
+        ['TOTAL incl. flight + visa', 19452256],
+      ],
+      Itinerary: [ITINERARY_HEADER, row({ 10: 'VND', 11: 100000, 12: 120000 })],
+    });
+    const stated = result.trip.totals.stated.find((s) => s.label === 'Group total');
+    expect(stated?.base).toEqual({ amount: 19452256, currency: 'VND' });
+  });
+
+  // Two travelers planning everything together, with no per-activity breakdown, is a
+  // common real workbook shape. It should read as one clear note, not one warning per
+  // activity — 70 near-identical cards would drown out anything genuinely worth fixing.
+  it('collapses a wholly absent traveler column into a single issue, not one per row', () => {
+    const headerWithoutTraveler = ITINERARY_HEADER.slice(0, -1);
+    const rowWithoutTraveler = (activity: string): CellInput[] => [
+      dateCell(2026, 7, 6), timeCell(9, 0), timeCell(10, 0), '', 'Indonesia', 'Surabaya', 'Tour',
+      'A → B', activity, '', 'USD', 10, 12, '', '',
+    ];
+    const result = importSheets({
+      Overview: [['Traveler count', 2]],
+      Itinerary: [
+        headerWithoutTraveler,
+        rowWithoutTraveler('Breakfast'),
+        rowWithoutTraveler('Lunch'),
+        rowWithoutTraveler('Dinner'),
+      ],
+    });
+    const travelerIssues = result.issues.filter((i) => i.kind === 'missing-traveler');
+    expect(travelerIssues).toHaveLength(1);
+    expect(travelerIssues[0]?.message).toEqual({ id: 'noTravelerColumn', sheet: 'Itinerary', count: 3 });
+    expect(travelerIssues[0]?.severity).toBe('info');
+  });
+
+  it('still warns per row when the traveler column exists but a specific cell is blank', () => {
+    const result = importSheets({
+      Overview: [['Traveler count', 2]],
+      Itinerary: [ITINERARY_HEADER, row({ 15: '' }), row({ 15: 'A' })],
+    });
+    const travelerIssues = result.issues.filter((i) => i.kind === 'missing-traveler');
+    expect(travelerIssues).toHaveLength(1);
+    expect(travelerIssues[0]?.message.id).toBe('missingTraveler');
+  });
+});
+
 describe('sources', () => {
   it('marks a source with a working link as verified', () => {
     const result = importSheets({

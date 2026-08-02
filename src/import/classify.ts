@@ -6,30 +6,22 @@
  */
 import type { ActivityType, BookingStatus, BookingUrgency } from '../domain/types';
 import { ACTIVITY_TYPE_ALIASES, BOOKING_STATUS_ALIASES, BOOKING_URGENCY_ALIASES } from './aliases';
-import { cleanText, normalizeKey } from './normalize';
+import { cleanText, matchAlias, normalizeKey } from './normalize';
 
+/**
+ * Classify a short piece of free text into one bucket of a fixed vocabulary.
+ *
+ * Delegates to `matchAlias`'s whole-word matching, so "Already booked" cannot match
+ * "ready" (hiding inside "al-ready-booked") the way raw substring matching once did.
+ */
 function classify<T extends string>(
   text: string,
   table: Record<string, readonly string[]>,
   fallback: T,
 ): { value: T; matched: boolean } {
-  const key = normalizeKey(text);
-  if (!key) return { value: fallback, matched: false };
-
-  for (const [value, aliases] of Object.entries(table)) {
-    if (aliases.some((a) => normalizeKey(a) === key)) return { value: value as T, matched: true };
-  }
-  for (const [value, aliases] of Object.entries(table)) {
-    if (aliases.some((a) => key.startsWith(normalizeKey(a)) || normalizeKey(a).startsWith(key))) {
-      return { value: value as T, matched: true };
-    }
-  }
-  for (const [value, aliases] of Object.entries(table)) {
-    if (aliases.some((a) => normalizeKey(a).length >= 4 && key.includes(normalizeKey(a)))) {
-      return { value: value as T, matched: true };
-    }
-  }
-  return { value: fallback, matched: false };
+  if (!normalizeKey(text)) return { value: fallback, matched: false };
+  const field = matchAlias(text, table);
+  return field === null ? { value: fallback, matched: false } : { value: field as T, matched: true };
 }
 
 /**

@@ -102,7 +102,7 @@ export type OverviewField =
   | 'warning' | 'duration';
 
 export const OVERVIEW_ALIASES: Record<OverviewField, readonly string[]> = {
-  title: ['triptitle', 'title', 'tripname', 'name', 'trip', 'journey', 'namatrip'],
+  title: ['triptitle', 'title', 'tripname', 'journey', 'namatrip'],
   destinations: ['destinations', 'destination', 'countries', 'places', 'route', 'where', 'cities', 'tujuan'],
   startDate: ['startdate', 'start', 'departuredate', 'from', 'begins', 'tanggalmulai'],
   endDate: ['enddate', 'end', 'returndate', 'to', 'until', 'ends', 'tanggalselesai'],
